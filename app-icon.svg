@@ -1,0 +1,91 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle with Gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3F51B5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5C6BC0;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF4081;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F50057;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  
+  <!-- Main Background -->
+  <circle cx="256" cy="256" r="240" fill="url(#bgGradient)" filter="url(#shadow)"/>
+  
+  <!-- Clock Face Background -->
+  <circle cx="256" cy="256" r="180" fill="#FFFFFF" opacity="0.95"/>
+  
+  <!-- Clock Border -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="url(#bgGradient)" stroke-width="8"/>
+  
+  <!-- Hour Markers -->
+  <g transform="translate(256, 256)">
+    <!-- 12 o'clock -->
+    <rect x="-4" y="-165" width="8" height="20" fill="#3F51B5" rx="4"/>
+    <!-- 3 o'clock -->
+    <rect x="145" y="-4" width="20" height="8" fill="#3F51B5" rx="4"/>
+    <!-- 6 o'clock -->
+    <rect x="-4" y="145" width="8" height="20" fill="#3F51B5" rx="4"/>
+    <!-- 9 o'clock -->
+    <rect x="-165" y="-4" width="20" height="8" fill="#3F51B5" rx="4"/>
+    
+    <!-- Additional hour markers (smaller) -->
+    <g transform="rotate(30)">
+      <rect x="-3" y="-165" width="6" height="15" fill="#5C6BC0" rx="3"/>
+    </g>
+    <g transform="rotate(60)">
+      <rect x="-3" y="-165" width="6" height="15" fill="#5C6BC0" rx="3"/>
+    </g>
+    <g transform="rotate(120)">
+      <rect x="-3" y="-165" width="6" height="15" fill="#5C6BC0" rx="3"/>
+    </g>
+    <g transform="rotate(150)">
+      <rect x="-3" y="-165" width="6" height="15" fill="#5C6BC0" rx="3"/>
+    </g>
+    <g transform="rotate(210)">
+      <rect x="-3" y="-165" width="6" height="15" fill="#5C6BC0" rx="3"/>
+    </g>
+    <g transform="rotate(240)">
+      <rect x="-3" y="-165" width="6" height="15" fill="#5C6BC0" rx="3"/>
+    </g>
+    <g transform="rotate(300)">
+      <rect x="-3" y="-165" width="6" height="15" fill="#5C6BC0" rx="3"/>
+    </g>
+    <g transform="rotate(330)">
+      <rect x="-3" y="-165" width="6" height="15" fill="#5C6BC0" rx="3"/>
+    </g>
+  </g>
+  
+  <!-- Clock Hands (showing approximately 5:30 - overtime time!) -->
+  <!-- Hour Hand -->
+  <g transform="translate(256, 256) rotate(165)">
+    <rect x="-6" y="-90" width="12" height="100" fill="url(#bgGradient)" rx="6"/>
+  </g>
+  
+  <!-- Minute Hand -->
+  <g transform="translate(256, 256) rotate(180)">
+    <rect x="-4" y="-130" width="8" height="140" fill="url(#accentGradient)" rx="4"/>
+  </g>
+  
+  <!-- Center Circle -->
+  <circle cx="256" cy="256" r="20" fill="url(#accentGradient)"/>
+  <circle cx="256" cy="256" r="12" fill="#FFFFFF"/>
+  
+  <!-- Plus/Minus Overtime Indicator (enlarged) -->
+  <g transform="translate(380, 132)">
+    <circle cx="0" cy="0" r="55" fill="url(#accentGradient)" filter="url(#shadow)"/>
+    <!-- Plus sign (bigger) -->
+    <rect x="-28" y="-6" width="56" height="12" fill="#FFFFFF" rx="6"/>
+    <rect x="-6" y="-28" width="12" height="56" fill="#FFFFFF" rx="6"/>
+  </g>
+  
+  <!-- Subtle "DE" for German context (very subtle, bottom right) -->
+  <g transform="translate(380, 380)" opacity="0.3">
+    <text x="0" y="0" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="url(#bgGradient)" text-anchor="middle">DE</text>
+  </g>
+</svg>
