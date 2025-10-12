@@ -1,0 +1,156 @@
+<mat-card class="period-overview-card">
+  <!-- Header -->
+  <mat-card-header class="period-header">
+    <mat-card-title>{{ periodTitle }}</mat-card-title>
+  </mat-card-header>
+
+  <mat-card-content *ngIf="report">
+    <!-- Main KPI Cards -->
+    <div class="kpi-grid">
+      <!-- Overtime Card -->
+      <div class="kpi-card" [class.positive]="report.overtimeHours >= 0" [class.negative]="report.overtimeHours < 0">
+        <div class="kpi-header">
+          <mat-icon>{{ getOvertimeIcon() }}</mat-icon>
+          <span class="kpi-label">Overtime</span>
+        </div>
+        <div class="kpi-value">{{ formatHours(report.overtimeHours) }}</div>
+        <div class="kpi-status">{{ getOvertimeStatus() }}</div>
+      </div>
+
+      <!-- Worked Hours Card -->
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <mat-icon>schedule</mat-icon>
+          <span class="kpi-label">Worked</span>
+        </div>
+        <div class="kpi-value">{{ report.totalWorkedHours.toFixed(1) }}h</div>
+        <div class="kpi-status">of {{ report.expectedWorkHours.toFixed(1) }}h expected</div>
+      </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="quick-stats">
+      <div class="stat-item" *ngFor="let stat of quickStats" [matTooltip]="stat.tooltip || ''">
+        <mat-icon class="stat-icon">{{ stat.icon }}</mat-icon>
+        <span class="stat-text">{{ stat.value }}</span>
+      </div>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <!-- Deficit Days Section (only if there are any) -->
+    <mat-expansion-panel *ngIf="getTotalDeficitDays() > 0" class="insight-panel deficit-panel">
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon class="panel-icon">trending_down</mat-icon>
+          Days Contributing to Deficit
+          <mat-chip class="count-chip">{{ getTotalDeficitDays() }}</mat-chip>
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+
+      <div class="day-list">
+        <div class="day-item" *ngFor="let day of topDeficitDays">
+          <div class="day-date">
+            <span class="date-text">{{ formatDate(day.date) }}</span>
+            <span class="day-name">{{ day.dayOfWeek }}</span>
+          </div>
+          <div class="day-details">
+            <span class="hours-worked">Worked {{ day.actualHours.toFixed(1) }}h</span>
+            <span class="hours-expected">Expected {{ day.expectedHours.toFixed(1) }}h</span>
+          </div>
+          <div class="day-impact negative">{{ formatHours(day.overtimeHours) }}</div>
+        </div>
+
+        <button 
+          mat-button 
+          class="show-more-btn"
+          *ngIf="getTotalDeficitDays() > PREVIEW_LIMIT && !showAllDeficitDays"
+          (click)="toggleDeficitDays()">
+          Show all {{ getTotalDeficitDays() }} days
+        </button>
+      </div>
+    </mat-expansion-panel>
+
+    <!-- Surplus Days Section (only if there are any) -->
+    <mat-expansion-panel *ngIf="getTotalSurplusDays() > 0" class="insight-panel surplus-panel">
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon class="panel-icon">trending_up</mat-icon>
+          Days with Extra Hours
+          <mat-chip class="count-chip">{{ getTotalSurplusDays() }}</mat-chip>
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+
+      <div class="day-list">
+        <div class="day-item" *ngFor="let day of topSurplusDays">
+          <div class="day-date">
+            <span class="date-text">{{ formatDate(day.date) }}</span>
+            <span class="day-name">{{ day.dayOfWeek }}</span>
+          </div>
+          <div class="day-details">
+            <span class="hours-worked">Worked {{ day.actualHours.toFixed(1) }}h</span>
+            <span class="hours-expected">Expected {{ day.expectedHours.toFixed(1) }}h</span>
+          </div>
+          <div class="day-impact positive">{{ formatHours(day.overtimeHours) }}</div>
+        </div>
+
+        <button 
+          mat-button 
+          class="show-more-btn"
+          *ngIf="getTotalSurplusDays() > PREVIEW_LIMIT && !showAllSurplusDays"
+          (click)="toggleSurplusDays()">
+          Show all {{ getTotalSurplusDays() }} days
+        </button>
+      </div>
+    </mat-expansion-panel>
+
+    <!-- Top Projects Section -->
+    <mat-expansion-panel *ngIf="topProjects.length > 0" class="insight-panel projects-panel">
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon class="panel-icon">work</mat-icon>
+          Top Projects
+          <mat-chip class="count-chip">{{ getTotalProjects() }}</mat-chip>
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+
+      <div class="project-list">
+        <div class="project-item" *ngFor="let project of topProjects">
+          <div class="project-header">
+            <span class="project-name">{{ project.projectName }}</span>
+            <span class="project-hours">{{ project.totalHours.toFixed(1) }}h ({{ project.percentageOfTotal.toFixed(0) }}%)</span>
+          </div>
+          <div class="project-bar-container">
+            <div class="project-bar" [style.width]="getProjectBarWidth(project)"></div>
+          </div>
+          <div class="project-meta" *ngIf="project.clientName">
+            <span class="client-name">{{ project.clientName }}</span>
+            <span class="billable-info" *ngIf="project.billableHours > 0">
+              {{ project.billableHours.toFixed(1) }}h billable
+            </span>
+          </div>
+        </div>
+
+        <button 
+          mat-button 
+          class="show-more-btn"
+          *ngIf="getTotalProjects() > PREVIEW_LIMIT && !showAllProjects"
+          (click)="toggleProjects()">
+          Show all {{ getTotalProjects() }} projects
+        </button>
+      </div>
+    </mat-expansion-panel>
+
+    <!-- Incomplete Days Warning -->
+    <div class="warning-box" *ngIf="incompleteDays.length > 0">
+      <mat-icon>warning</mat-icon>
+      <span>{{ incompleteDays.length }} day(s) with incomplete tracking (&lt;{{ INCOMPLETE_THRESHOLD }}h or no entries)</span>
+    </div>
+  </mat-card-content>
+
+  <!-- No Data State -->
+  <mat-card-content *ngIf="!report" class="no-data">
+    <mat-icon>calendar_today</mat-icon>
+    <p>Select a date range to view your overtime summary</p>
+  </mat-card-content>
+</mat-card>

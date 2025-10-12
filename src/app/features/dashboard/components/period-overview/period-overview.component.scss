@@ -1,0 +1,491 @@
+// Period Overview Component Styles
+// Design reference for the entire application
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+.period-overview-card {
+  margin-bottom: 24px;
+
+  .period-header {
+    padding: 24px 24px 16px;
+
+    mat-card-title {
+      font-size: 24px;
+      font-weight: 500;
+      color: var(--on-surface, #1d1b20);
+    }
+  }
+
+  mat-card-content {
+    padding: 0 24px 24px;
+  }
+}
+
+// KPI Cards Grid
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.kpi-card {
+  padding: 20px;
+  border-radius: 12px;
+  background: var(--surface-container-low, #f7f2fa);
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  &.positive {
+    background: linear-gradient(135deg, #e8f5e9 0%, #f1f8f4 100%);
+    
+    .kpi-value {
+      color: #2e7d32;
+    }
+
+    .kpi-header mat-icon {
+      color: #2e7d32;
+    }
+  }
+
+  &.negative {
+    background: linear-gradient(135deg, #ffebee 0%, #fef5f6 100%);
+    
+    .kpi-value {
+      color: #c62828;
+    }
+
+    .kpi-header mat-icon {
+      color: #c62828;
+    }
+  }
+
+  .kpi-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      color: var(--primary, #6750a4);
+    }
+
+    .kpi-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--on-surface-variant, #49454f);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  }
+
+  .kpi-value {
+    font-size: 32px;
+    font-weight: 600;
+    line-height: 1.2;
+    margin-bottom: 4px;
+  }
+
+  .kpi-status {
+    font-size: 13px;
+    color: var(--on-surface-variant, #49454f);
+  }
+}
+
+// Quick Stats
+.quick-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px 0;
+
+  .stat-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--surface-container, #f3edf7);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--on-surface, #1d1b20);
+
+    .stat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: var(--primary, #6750a4);
+    }
+
+    .stat-text {
+      line-height: 1.4;
+    }
+  }
+}
+
+mat-divider {
+  margin: 24px 0;
+}
+
+// Expansion Panels
+.insight-panel {
+  margin-bottom: 12px;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  border: 1px solid var(--outline-variant, #cac4d0);
+
+  &::before {
+    display: none; // Remove Material's default shadow
+  }
+
+  mat-expansion-panel-header {
+    padding: 16px 20px;
+
+    mat-panel-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 500;
+
+      .panel-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        color: var(--primary, #6750a4);
+      }
+
+      .count-chip {
+        margin-left: auto;
+        font-size: 12px;
+        min-height: 24px;
+        padding: 0 8px;
+      }
+    }
+  }
+
+  &.deficit-panel {
+    .panel-icon {
+      color: #c62828;
+    }
+  }
+
+  &.surplus-panel {
+    .panel-icon {
+      color: #2e7d32;
+    }
+  }
+
+  &.projects-panel {
+    .panel-icon {
+      color: var(--primary, #6750a4);
+    }
+  }
+}
+
+// Day List
+.day-list {
+  padding: 8px 0;
+
+  .day-item {
+    display: grid;
+    grid-template-columns: 140px 1fr auto;
+    gap: 16px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background: var(--surface-container-lowest, #ffffff);
+    transition: background 0.2s ease;
+
+    &:hover {
+      background: var(--surface-container, #f3edf7);
+    }
+
+    .day-date {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      .date-text {
+        font-weight: 500;
+        font-size: 14px;
+        color: var(--on-surface, #1d1b20);
+      }
+
+      .day-name {
+        font-size: 12px;
+        color: var(--on-surface-variant, #49454f);
+      }
+    }
+
+    .day-details {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 13px;
+
+      .hours-worked {
+        color: var(--on-surface, #1d1b20);
+      }
+
+      .hours-expected {
+        color: var(--on-surface-variant, #49454f);
+      }
+    }
+
+    .day-impact {
+      font-weight: 600;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+
+      &.positive {
+        color: #2e7d32;
+      }
+
+      &.negative {
+        color: #c62828;
+      }
+    }
+  }
+}
+
+// Project List
+.project-list {
+  padding: 8px 0;
+
+  .project-item {
+    padding: 16px 20px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    background: var(--surface-container-lowest, #ffffff);
+    transition: background 0.2s ease;
+
+    &:hover {
+      background: var(--surface-container, #f3edf7);
+    }
+
+    .project-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+
+      .project-name {
+        font-weight: 500;
+        font-size: 14px;
+        color: var(--on-surface, #1d1b20);
+      }
+
+      .project-hours {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--primary, #6750a4);
+      }
+    }
+
+    .project-bar-container {
+      height: 6px;
+      background: var(--surface-container, #f3edf7);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 8px;
+
+      .project-bar {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary, #6750a4) 0%, var(--tertiary, #7d5260) 100%);
+        border-radius: 3px;
+        transition: width 0.3s ease;
+      }
+    }
+
+    .project-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--on-surface-variant, #49454f);
+
+      .client-name {
+        font-style: italic;
+      }
+
+      .billable-info {
+        color: #2e7d32;
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+// Show More Button
+.show-more-btn {
+  width: 100%;
+  margin-top: 8px;
+  color: var(--primary, #6750a4);
+  font-size: 13px;
+}
+
+// Warning Box
+.warning-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  margin-top: 16px;
+  background: #fff8e1;
+  border: 1px solid #ffb300;
+  border-radius: 8px;
+  color: #f57c00;
+  font-size: 13px;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+}
+
+// No Data State
+.no-data {
+  text-align: center;
+  padding: 60px 20px !important;
+  color: var(--on-surface-variant, #49454f);
+
+  mat-icon {
+    font-size: 64px;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 16px;
+    opacity: 0.3;
+  }
+
+  p {
+    font-size: 16px;
+    margin: 0;
+  }
+}
+
+// Dark Theme Overrides
+:host-context(.dark-theme) {
+  .period-overview-card .period-header mat-card-title {
+    color: var(--on-surface, #e6e1e5);
+  }
+
+  .kpi-card {
+    background: var(--surface-container-low, #211f26);
+
+    &.positive {
+      background: linear-gradient(135deg, #1b3a1f 0%, #1f2921 100%);
+
+      .kpi-value {
+        color: #81c784;
+      }
+
+      .kpi-header mat-icon {
+        color: #81c784;
+      }
+    }
+
+    &.negative {
+      background: linear-gradient(135deg, #3a1b1f 0%, #2b1f21 100%);
+
+      .kpi-value {
+        color: #e57373;
+      }
+
+      .kpi-header mat-icon {
+        color: #e57373;
+      }
+    }
+
+    .kpi-header .kpi-label {
+      color: var(--on-surface-variant, #cac4d0);
+    }
+
+    .kpi-status {
+      color: var(--on-surface-variant, #cac4d0);
+    }
+  }
+
+  .quick-stats .stat-item {
+    background: var(--surface-container, #211f26);
+    color: var(--on-surface, #e6e1e5);
+  }
+
+  .insight-panel {
+    background: var(--surface-container-low, #211f26);
+    border-color: var(--outline-variant, #49454f);
+  }
+
+  .day-list .day-item,
+  .project-list .project-item {
+    background: var(--surface, #1d1b20);
+
+    &:hover {
+      background: var(--surface-container, #211f26);
+    }
+  }
+
+  .warning-box {
+    background: #3e2723;
+    border-color: #ff6f00;
+    color: #ffb74d;
+  }
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .day-list .day-item {
+    grid-template-columns: 1fr;
+    gap: 8px;
+
+    .day-impact {
+      justify-content: flex-end;
+    }
+  }
+
+  .quick-stats {
+    flex-direction: column;
+    gap: 8px;
+
+    .stat-item {
+      width: 100%;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .period-overview-card {
+    .period-header {
+      padding: 16px 16px 12px;
+
+      mat-card-title {
+        font-size: 20px;
+      }
+    }
+
+    mat-card-content {
+      padding: 0 16px 16px;
+    }
+  }
+
+  .kpi-card {
+    padding: 16px;
+
+    .kpi-value {
+      font-size: 28px;
+    }
+  }
+}
