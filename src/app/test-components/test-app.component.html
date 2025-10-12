@@ -1,0 +1,388 @@
+<div class="container">
+  <header>
+    <h1>{{ title }}</h1>
+    <p class="environment-badge" [class.tauri]="isTauriEnvironment">
+      {{ isTauriEnvironment ? '🚀 Running in Tauri' : '🌐 Running in Browser' }}
+    </p>
+  </header>
+
+  <main>
+    <section class="test-section" *ngIf="isTauriEnvironment">
+      <h2>🧪 Tauri Integration Test</h2>
+      
+      <div class="test-result" *ngIf="greeting">
+        <h3>✅ Greet Command</h3>
+        <p>{{ greeting }}</p>
+      </div>
+
+      <div class="test-result" *ngIf="systemInfo">
+        <h3>✅ System Info</h3>
+        <pre>{{ systemInfo }}</pre>
+      </div>
+
+      <div class="test-result" *ngIf="configPath">
+        <h3>✅ Config Path</h3>
+        <p class="config-path">{{ configPath }}</p>
+      </div>
+    </section>
+
+    <!-- Clockify API Integration Test -->
+    <section class="clockify-section" *ngIf="isTauriEnvironment">
+      <h2>🕐 Clockify API Integration Test (Session 2)</h2>
+
+      <div class="form-group">
+        <label for="apiKey">Clockify API Key:</label>
+        <input 
+          type="password" 
+          id="apiKey" 
+          [(ngModel)]="apiKey" 
+          placeholder="Enter your Clockify API key"
+          class="input-field"
+        />
+        <small>Get your API key from: <a href="https://app.clockify.me/user/settings" target="_blank">Clockify Settings</a></small>
+      </div>
+
+      <div class="button-group">
+        <button (click)="testValidateApiKey()" class="btn btn-primary">
+          1. Validate API Key
+        </button>
+        <button (click)="testFetchWorkspaces()" class="btn btn-primary">
+          2. Fetch Workspaces
+        </button>
+      </div>
+
+      <div class="status-message" *ngIf="clockifyStatus" [class.error]="clockifyStatus.includes('❌')">
+        {{ clockifyStatus }}
+      </div>
+
+      <div class="workspaces-section" *ngIf="workspaces.length > 0">
+        <h3>Workspaces</h3>
+        <div class="workspace-list">
+          <div 
+            *ngFor="let workspace of workspaces" 
+            class="workspace-item"
+            [class.selected]="selectedWorkspaceId === workspace.id"
+            (click)="selectedWorkspaceId = workspace.id"
+          >
+            <strong>{{ workspace.name }}</strong>
+            <small>ID: {{ workspace.id }}</small>
+          </div>
+        </div>
+
+        <div class="button-group" *ngIf="selectedWorkspaceId">
+          <button (click)="testFetchProjects()" class="btn btn-secondary">
+            3. Fetch Projects
+          </button>
+          <button (click)="testFetchTimeEntries()" class="btn btn-secondary">
+            4. Fetch Time Entries (Last 30 Days)
+          </button>
+        </div>
+      </div>
+
+      <div class="projects-section" *ngIf="projects.length > 0">
+        <h3>Projects ({{ projects.length }})</h3>
+        <div class="project-list">
+          <div *ngFor="let project of projects" class="project-item">
+            <span class="project-color" [style.background-color]="project.color"></span>
+            <strong>{{ project.name }}</strong>
+            <span class="badge" [class.billable]="project.billable">
+              {{ project.billable ? 'Billable' : 'Non-billable' }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="time-entries-section" *ngIf="timeEntries.length > 0">
+        <h3>Time Entries ({{ timeEntries.length }})</h3>
+        <div class="entry-list">
+          <div *ngFor="let entry of timeEntries" class="entry-item">
+            <div class="entry-header">
+              <strong>{{ entry.description || '(No description)' }}</strong>
+              <span class="duration">{{ entry.timeInterval.duration }}</span>
+            </div>
+            <div class="entry-meta">
+              <small>{{ entry.timeInterval.start | date:'short' }}</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Holiday API Integration Test -->
+    <section class="holiday-section" *ngIf="isTauriEnvironment">
+      <h2>🎄 Holiday API Integration Test (Session 3)</h2>
+
+      <div class="form-group">
+        <label for="stateCode">German State (Bundesland):</label>
+        <select id="stateCode" [(ngModel)]="selectedStateCode" class="input-field">
+          <option value="BY">Bayern</option>
+          <option value="BW">Baden-Württemberg</option>
+          <option value="BE">Berlin</option>
+          <option value="BB">Brandenburg</option>
+          <option value="HB">Bremen</option>
+          <option value="HH">Hamburg</option>
+          <option value="HE">Hessen</option>
+          <option value="MV">Mecklenburg-Vorpommern</option>
+          <option value="NI">Niedersachsen</option>
+          <option value="NW">Nordrhein-Westfalen</option>
+          <option value="RP">Rheinland-Pfalz</option>
+          <option value="SL">Saarland</option>
+          <option value="SN">Sachsen</option>
+          <option value="ST">Sachsen-Anhalt</option>
+          <option value="SH">Schleswig-Holstein</option>
+          <option value="TH">Thüringen</option>
+        </select>
+
+        <label for="year">Year:</label>
+        <input 
+          type="number" 
+          id="year" 
+          [(ngModel)]="selectedYear" 
+          class="input-field"
+          min="2024"
+          max="2030"
+        />
+      </div>
+
+      <div class="button-group">
+        <button (click)="testGetGermanStates()" class="btn btn-primary">
+          1. Get German States
+        </button>
+        <button (click)="testFetchPublicHolidays()" class="btn btn-primary">
+          2. Fetch Public Holidays
+        </button>
+        <button (click)="testFetchSchoolHolidays()" class="btn btn-primary">
+          3. Fetch School Holidays
+        </button>
+        <button (click)="testFetchAndCacheHolidays()" class="btn btn-success">
+          📦 Fetch & Cache All
+        </button>
+      </div>
+
+      <div class="button-group">
+        <button (click)="testAddVacationDay()" class="btn btn-secondary">
+          ➕ Add Test Vacation Day
+        </button>
+        <button (click)="testGetVacationDays()" class="btn btn-secondary">
+          📋 Get Vacation Days
+        </button>
+        <button (click)="testClearHolidayCache()" class="btn btn-danger">
+          🗑️ Clear Cache
+        </button>
+      </div>
+
+      <div class="status-message" *ngIf="holidayStatus" [class.error]="holidayStatus.includes('❌')">
+        {{ holidayStatus }}
+      </div>
+
+      <div class="german-states-section" *ngIf="germanStates.length > 0">
+        <h3>German States ({{ germanStates.length }})</h3>
+        <div class="state-list">
+          <div *ngFor="let state of germanStates" class="state-item">
+            <strong>{{ state.code }}</strong>: {{ state.name }}
+          </div>
+        </div>
+      </div>
+
+      <div class="holidays-section" *ngIf="publicHolidays.length > 0">
+        <h3>Public Holidays ({{ publicHolidays.length }})</h3>
+        <div class="holiday-list">
+          <div *ngFor="let holiday of publicHolidays" class="holiday-item">
+            <span class="holiday-date">{{ holiday.date }}</span>
+            <strong>{{ holiday.localName }}</strong>
+            <small *ngIf="holiday.name !== holiday.localName">({{ holiday.name }})</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="holidays-section" *ngIf="schoolHolidays.length > 0">
+        <h3>School Holidays ({{ schoolHolidays.length }} periods)</h3>
+        <div class="holiday-list">
+          <div *ngFor="let holiday of schoolHolidays" class="holiday-item">
+            <span class="holiday-date">{{ holiday.start }} → {{ holiday.end }}</span>
+            <strong>{{ holiday.name }}</strong>
+            <small>({{ holiday.slug }})</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="vacation-section" *ngIf="vacationDays.length > 0">
+        <h3>Vacation Days ({{ vacationDays.length }})</h3>
+        <div class="vacation-list">
+          <div *ngFor="let vacation of vacationDays" class="vacation-item">
+            <span class="vacation-date">{{ vacation.date }}</span>
+            <strong>{{ vacation.dayType }}</strong>
+            <small *ngIf="vacation.description">- {{ vacation.description }}</small>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="info-section" *ngIf="!isTauriEnvironment">
+      <h2>ℹ️ Development Mode</h2>
+      <p>Run <code>npm run tauri dev</code> to test Tauri integration.</p>
+    </section>
+
+    <!-- Session 4: Overtime Calculation Test -->
+    <section class="test-section overtime-section" *ngIf="isTauriEnvironment">
+      <h2>⏰ Overtime Calculation Test (Session 4)</h2>
+      
+      <div class="test-controls">
+        <h3>Calculate Overtime Report</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="overtimeStartDate">Start Date:</label>
+            <input 
+              type="date" 
+              id="overtimeStartDate" 
+              [(ngModel)]="overtimeStartDate"
+              class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="overtimeEndDate">End Date:</label>
+            <input 
+              type="date" 
+              id="overtimeEndDate" 
+              [(ngModel)]="overtimeEndDate"
+              class="form-control">
+          </div>
+        </div>
+        
+        <div class="button-group">
+          <button (click)="testCalculateOvertime()" class="test-button primary">
+            📊 Calculate Overtime Report
+          </button>
+          <button (click)="setCurrentWeekDates()" class="test-button">
+            📅 This Week
+          </button>
+          <button (click)="setCurrentMonthDates()" class="test-button">
+            📆 This Month
+          </button>
+          <button (click)="setLast7Days()" class="test-button">
+            🔙 Last 7 Days
+          </button>
+        </div>
+      </div>
+
+      <div class="status-message" *ngIf="overtimeStatusMessage" 
+           [class.error]="overtimeStatusMessage.includes('Error')">
+        {{ overtimeStatusMessage }}
+      </div>
+
+      <!-- Overtime Report Summary -->
+      <div class="result-section" *ngIf="overtimeReport">
+        <h3>📈 Overtime Report Summary</h3>
+        <div class="report-summary">
+          <div class="summary-card">
+            <div class="card-label">Period</div>
+            <div class="card-value">{{ overtimeReport.periodStart }} to {{ overtimeReport.periodEnd }}</div>
+          </div>
+          <div class="summary-card" [class.positive]="overtimeReport.overtimeHours > 0" 
+               [class.negative]="overtimeReport.overtimeHours < 0">
+            <div class="card-label">Overtime Hours</div>
+            <div class="card-value large">{{ formatHours(overtimeReport.overtimeHours) }}</div>
+          </div>
+          <div class="summary-card">
+            <div class="card-label">Worked / Expected</div>
+            <div class="card-value">{{ overtimeReport.totalWorkedHours.toFixed(2) }}h / {{ overtimeReport.expectedWorkHours.toFixed(2) }}h</div>
+          </div>
+          <div class="summary-card">
+            <div class="card-label">Work Days</div>
+            <div class="card-value">{{ overtimeReport.workDaysCount }}</div>
+          </div>
+          <div class="summary-card">
+            <div class="card-label">Vacation Days</div>
+            <div class="card-value">{{ overtimeReport.vacationDaysTaken }}</div>
+          </div>
+          <div class="summary-card">
+            <div class="card-label">Sick Days</div>
+            <div class="card-value">{{ overtimeReport.sickDaysTaken }}</div>
+          </div>
+          <div class="summary-card">
+            <div class="card-label">Public Holidays</div>
+            <div class="card-value">{{ overtimeReport.publicHolidaysCount }}</div>
+          </div>
+          <div class="summary-card">
+            <div class="card-label">Weekend Days Worked</div>
+            <div class="card-value">{{ overtimeReport.weekendDaysWorked }}</div>
+          </div>
+        </div>
+
+        <!-- Daily Breakdown -->
+        <h4>📅 Daily Breakdown ({{ overtimeReport.dailyBreakdown.length }} days)</h4>
+        <div class="table-container">
+          <table class="result-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Day</th>
+                <th>Type</th>
+                <th>Expected</th>
+                <th>Actual</th>
+                <th>Overtime</th>
+                <th>Entries</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let day of overtimeReport.dailyBreakdown" 
+                  [class]="getDayTypeClass(day.dayType)">
+                <td>{{ day.date }}</td>
+                <td>{{ day.dayOfWeek }}</td>
+                <td>{{ getDayTypeName(day.dayType) }}</td>
+                <td>{{ day.expectedHours.toFixed(2) }}h</td>
+                <td>{{ day.actualHours.toFixed(2) }}h</td>
+                <td [class.positive]="day.overtimeHours > 0" 
+                    [class.negative]="day.overtimeHours < 0">
+                  {{ formatHours(day.overtimeHours) }}
+                </td>
+                <td>{{ day.timeEntriesCount }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Project Breakdown -->
+        <h4>📊 Project Breakdown ({{ overtimeReport.projectBreakdown.length }} projects)</h4>
+        <div class="table-container">
+          <table class="result-table">
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Client</th>
+                <th>Total Hours</th>
+                <th>Billable</th>
+                <th>Non-Billable</th>
+                <th>% of Total</th>
+                <th>Entries</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let project of overtimeReport.projectBreakdown">
+                <td><strong>{{ project.projectName }}</strong></td>
+                <td>{{ project.clientName || '-' }}</td>
+                <td>{{ project.totalHours.toFixed(2) }}h</td>
+                <td>{{ project.billableHours.toFixed(2) }}h</td>
+                <td>{{ project.nonBillableHours.toFixed(2) }}h</td>
+                <td>{{ project.percentageOfTotal.toFixed(1) }}%</td>
+                <td>{{ project.entryCount }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="next-steps">
+      <h2>📋 Session Progress</h2>
+      <ul>
+        <li>✅ Session 1: Tauri foundation setup complete</li>
+        <li>✅ Session 2: Clockify API integration complete</li>
+        <li>✅ Session 3: German Holiday Integration complete</li>
+        <li>🚧 Session 4: Overtime Calculation Engine (IN PROGRESS)</li>
+        <li>⏭️ Next: Session 5 - Configuration UI & Setup Wizard</li>
+      </ul>
+    </section>
+  </main>
+
+  <router-outlet />
+</div>
