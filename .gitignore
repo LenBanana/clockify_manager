@@ -40,3 +40,22 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+
+# Tauri
+/src-tauri/target
+/src-tauri/WixTools
+/src-tauri/gen
+*.exe
+*.msi
+*.AppImage
+*.deb
+*.dmg
+*.pkg
+
+# Tauri build artifacts
+/src-tauri/target/
+/src-tauri/Cargo.lock
+
+# Tauri cache and logs
+/src-tauri/.cargo/
+/src-tauri/logs/
