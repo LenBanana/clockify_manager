@@ -1,0 +1,8 @@
+// Main app component styles
+// The router-outlet will display routed components
+
+:host {
+  display: block;
+  height: 100vh;
+  width: 100%;
+}
