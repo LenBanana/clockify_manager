@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Clockify Overtime Tracker",
-  "version": "1.0.0",
+  "version": "../package.json",
   "identifier": "com.clockify-overtime-tracker.app",
   "build": {
     "frontendDist": "../dist/clockify_manager/browser",
