@@ -79,3 +79,29 @@ body.dark-theme ::-webkit-scrollbar-thumb:hover {
     }
   }
 }
+
+// Slide toggle enhancements
+.mat-mdc-slide-toggle {
+  // Increase spacing between toggle and label
+  .mdc-switch {
+    margin-right: var(--spacing-md);
+  }
+  
+  // Ensure label is properly aligned
+  .mdc-label {
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+// Dark theme slide toggle fixes
+.dark-theme {
+  .mat-mdc-slide-toggle {
+    // Fix label color in dark theme
+    .mdc-label,
+    .mdc-form-field > label,
+    label {
+      color: rgba(255, 255, 255, 0.87) !important;
+    }
+  }
+}

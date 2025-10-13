@@ -168,6 +168,19 @@ html {
   width: 100%;
 }
 
+// Slide toggle improvements
+.mat-mdc-slide-toggle {  
+  // Ensure proper label color
+  label {
+    color: rgba(0, 0, 0, 0.87);
+  }
+}
+
+// Dark theme label color for slide toggle
+.dark-theme .mat-mdc-slide-toggle label {
+  color: rgba(255, 255, 255, 0.87);
+}
+
 // Utility classes
 .text-center {
   text-align: center;
@@ -321,6 +334,17 @@ html {
   
   .mat-mdc-tab-body-content {
     color: #e6e1e5;
+  }
+  
+  // Slide toggles
+  .mat-mdc-slide-toggle {
+    .mdc-label {
+      color: var(--on-surface) !important;
+    }
+    
+    .mdc-form-field > label {
+      color: var(--on-surface) !important;
+    }
   }
 }
 
