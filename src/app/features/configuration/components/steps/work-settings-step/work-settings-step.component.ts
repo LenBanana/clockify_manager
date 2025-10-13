@@ -83,26 +83,6 @@ import { WorkSettings } from '../../../../../core/models/config.model';
           </div>
         </div>
 
-        <div class="form-section">
-          <h4>Break Settings</h4>
-          <mat-slide-toggle formControlName="includeBreaks">
-            Include breaks in calculation
-          </mat-slide-toggle>
-
-          <mat-form-field appearance="outline" *ngIf="workSettingsForm.get('includeBreaks')?.value">
-            <mat-label>Break Duration (minutes)</mat-label>
-            <input 
-              matInput 
-              type="number" 
-              formControlName="breakDuration"
-              min="0"
-              max="240"
-            />
-            <mat-icon matSuffix>free_breakfast</mat-icon>
-            <mat-hint>Typically 30-60 minutes</mat-hint>
-          </mat-form-field>
-        </div>
-
         <div class="summary-card" *ngIf="workSettingsForm.valid">
           <mat-icon>info</mat-icon>
           <div class="summary-content">

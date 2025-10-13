@@ -167,25 +167,6 @@ import { DialogService } from '../../../../core/services/dialog.service';
             </div>
 
             <div class="setting-section">
-              <h4>Break Settings</h4>
-              <mat-slide-toggle [(ngModel)]="config.work_settings.include_breaks">
-                Include breaks in calculation
-              </mat-slide-toggle>
-
-              <mat-form-field appearance="outline" *ngIf="config.work_settings.include_breaks">
-                <mat-label>Break Duration (minutes)</mat-label>
-                <input 
-                  matInput 
-                  type="number" 
-                  [(ngModel)]="config.work_settings.break_duration_minutes"
-                  min="0"
-                  max="240"
-                />
-                <mat-icon matSuffix>free_breakfast</mat-icon>
-              </mat-form-field>
-            </div>
-
-            <div class="setting-section">
               <h4>Entry Date</h4>
               <p class="section-description">
                 Set your company entry date. Only time entries from this date onwards will be included in calculations.
