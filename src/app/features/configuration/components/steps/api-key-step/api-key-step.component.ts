@@ -6,6 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { firstValueFrom } from 'rxjs';
 import { ClockifyService } from '../../../../../core/services/clockify.service';
 import { ConfigService } from '../../../../../core/services/config.service';
 import { LoadingSpinnerComponent } from '../../../../../shared/components/loading-spinner/loading-spinner.component';
@@ -247,7 +248,7 @@ export class ApiKeyStepComponent implements OnInit {
 
     try {
       // Try to validate the API key by fetching workspaces
-      await this.clockifyService.validateApiKey(apiKey).toPromise();
+      await firstValueFrom(this.clockifyService.validateApiKey(apiKey));
       
       // Update config with new API key and base URL
       const config = this.configService.getCurrentConfig();

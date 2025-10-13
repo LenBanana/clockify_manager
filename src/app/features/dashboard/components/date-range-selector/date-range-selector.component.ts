@@ -7,13 +7,20 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
+import { ConfigService } from '../../../../core/services/config.service';
 
 export interface DateRange {
   startDate: string; // YYYY-MM-DD format
   endDate: string;   // YYYY-MM-DD format
 }
 
-type DateRangePreset = 'thisWeek' | 'thisMonth' | 'lastMonth' | 'thisYear' | 'custom';
+type DateRangePreset = 'thisMonth' | 'lastMonth' | 'thisYear' | 'sinceEntry' | 'custom';
+
+interface PresetOption {
+  value: DateRangePreset;
+  label: string;
+  durationDays: number;
+}
 
 /**
  * Date range selector with preset options and custom date picker
@@ -44,11 +51,12 @@ type DateRangePreset = 'thisWeek' | 'thisMonth' | 'lastMonth' | 'thisYear' | 'cu
         (change)="onPresetChange($event.value)"
         class="preset-buttons"
       >
-        <mat-button-toggle value="thisWeek">This Week</mat-button-toggle>
-        <mat-button-toggle value="thisMonth">This Month</mat-button-toggle>
-        <mat-button-toggle value="lastMonth">Last Month</mat-button-toggle>
-        <mat-button-toggle value="thisYear">This Year</mat-button-toggle>
-        <mat-button-toggle value="custom">Custom</mat-button-toggle>
+        <mat-button-toggle 
+          *ngFor="let option of availablePresets" 
+          [value]="option.value"
+        >
+          {{ option.label }}
+        </mat-button-toggle>
       </mat-button-toggle-group>
 
       <!-- Custom Date Range Picker -->
@@ -257,10 +265,90 @@ export class DateRangeSelectorComponent implements OnInit {
 
   currentStartDate: string = '';
   currentEndDate: string = '';
+  
+  availablePresets: PresetOption[] = [];
+
+  constructor(private configService: ConfigService) {}
 
   ngOnInit(): void {
-    // Initialize with "This Month" by default
-    this.onPresetChange('thisMonth');
+    // Build available presets based on configuration
+    this.buildAvailablePresets();
+    
+    // Initialize with first preset (shortest period)
+    if (this.availablePresets.length > 0) {
+      this.onPresetChange(this.availablePresets[0].value);
+    }
+  }
+
+  /**
+   * Build and sort available preset options by duration
+   */
+  private buildAvailablePresets(): void {
+    const today = new Date();
+    const config = this.configService.getCurrentConfig();
+    const entryDate = config.work_settings.entry_date;
+    
+    const presets: PresetOption[] = [];
+    
+    // This Month
+    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const thisMonthDays = this.calculateDaysBetween(thisMonthStart, today);
+    presets.push({
+      value: 'thisMonth',
+      label: 'This Month',
+      durationDays: thisMonthDays
+    });
+    
+    // Last Month
+    const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+    const lastMonthDays = this.calculateDaysBetween(lastMonthStart, lastMonthEnd);
+    presets.push({
+      value: 'lastMonth',
+      label: 'Last Month',
+      durationDays: lastMonthDays
+    });
+    
+    // This Year
+    const thisYearStart = new Date(today.getFullYear(), 0, 1);
+    const thisYearDays = this.calculateDaysBetween(thisYearStart, today);
+    presets.push({
+      value: 'thisYear',
+      label: 'This Year',
+      durationDays: thisYearDays
+    });
+    
+    // Since Entry (only if entry date is configured)
+    if (entryDate) {
+      const entryDateObj = new Date(entryDate);
+      const sinceEntryDays = this.calculateDaysBetween(entryDateObj, today);
+      presets.push({
+        value: 'sinceEntry',
+        label: 'Since Entry',
+        durationDays: sinceEntryDays
+      });
+    }
+    
+    // Sort by duration (shortest to longest)
+    presets.sort((a, b) => a.durationDays - b.durationDays);
+    
+    // Always add Custom last
+    presets.push({
+      value: 'custom',
+      label: 'Custom',
+      durationDays: Infinity // Always last
+    });
+    
+    this.availablePresets = presets;
+  }
+
+  /**
+   * Calculate days between two dates
+   */
+  private calculateDaysBetween(start: Date, end: Date): number {
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const diffMs = end.getTime() - start.getTime();
+    return Math.ceil(diffMs / msPerDay);
   }
 
   onPresetChange(preset: DateRangePreset): void {
@@ -268,6 +356,7 @@ export class DateRangeSelectorComponent implements OnInit {
 
     const today = new Date();
     const currentHour = today.getHours();
+    const config = this.configService.getCurrentConfig();
     
     // If it's before 6 PM (18:00), use yesterday as the end date for "current" periods
     // This prevents showing negative hours when viewing early in the day
@@ -278,14 +367,6 @@ export class DateRangeSelectorComponent implements OnInit {
     let endDate: Date;
 
     switch (preset) {
-      case 'thisWeek':
-        // Start from Monday of current week
-        const dayOfWeek = today.getDay();
-        const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-        startDate = new Date(today.setDate(diff));
-        endDate = effectiveEndDate;
-        break;
-
       case 'thisMonth':
         startDate = new Date(today.getFullYear(), today.getMonth(), 1);
         endDate = effectiveEndDate;
@@ -299,6 +380,18 @@ export class DateRangeSelectorComponent implements OnInit {
       case 'thisYear':
         startDate = new Date(today.getFullYear(), 0, 1);
         endDate = effectiveEndDate;
+        break;
+
+      case 'sinceEntry':
+        const entryDate = config.work_settings.entry_date;
+        if (entryDate) {
+          startDate = new Date(entryDate);
+          endDate = effectiveEndDate;
+        } else {
+          // Fallback to this month if entry date not set
+          startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+          endDate = effectiveEndDate;
+        }
         break;
 
       case 'custom':

@@ -7,6 +7,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatStepper } from '@angular/material/stepper';
 import { StepperSelectionEvent } from '@angular/cdk/stepper';
+import { firstValueFrom } from 'rxjs';
 import { ConfigService } from '../../../../core/services/config.service';
 import { AppConfig } from '../../../../core/models/config.model';
 import { WelcomeStepComponent } from '../steps/welcome-step/welcome-step.component';
@@ -337,7 +338,7 @@ export class SetupWizardComponent implements OnInit {
     this.saving = true;
 
     try {
-      await this.configService.saveConfig(this.config).toPromise();
+      await firstValueFrom(this.configService.saveConfig(this.config));
       
       this.snackBar.open('Configuration saved successfully!', 'Close', {
         duration: 3000,

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
+import { firstValueFrom } from 'rxjs';
 import { ClockifyService } from '../../../../../core/services/clockify.service';
 import { ConfigService } from '../../../../../core/services/config.service';
 import { Workspace } from '../../../../../core/models/clockify.model';
@@ -150,9 +151,8 @@ export class WorkspaceStepComponent implements OnInit {
         return;
       }
 
-      this.workspaces = await this.clockifyService
-        .fetchWorkspaces(config.clockify.api_key, config.clockify.base_url)
-        .toPromise() || [];
+      this.workspaces = await firstValueFrom(this.clockifyService
+        .fetchWorkspaces(config.clockify.api_key, config.clockify.base_url)) || [];
       
       this.loading = false;
 

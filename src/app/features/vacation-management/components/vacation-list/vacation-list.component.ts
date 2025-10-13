@@ -16,6 +16,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { VacationDay, VacationRange } from '../../../../core/models/holiday.model';
 import { HolidayService } from '../../../../core/services/holiday.service';
 import { AddVacationDialogComponent } from '../add-vacation-dialog/add-vacation-dialog.component';
+import { DialogService } from '../../../../core/services/dialog.service';
 
 /**
  * Component displaying vacation days grouped by ranges in an expandable list
@@ -346,7 +347,8 @@ export class VacationListComponent implements OnInit, OnChanges {
   constructor(
     private holidayService: HolidayService,
     private snackBar: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private dialogService: DialogService
   ) {}
 
   ngOnInit(): void {
@@ -431,19 +433,21 @@ export class VacationListComponent implements OnInit, OnChanges {
       ? `Delete vacation day on ${this.formatDate(range.startDate)}?`
       : `Delete ${range.dayCount} vacation days from ${this.formatDate(range.startDate)} to ${this.formatDate(range.endDate)}?`;
 
-    if (confirm(message)) {
-      this.holidayService.deleteVacationRange(range.rangeId).subscribe({
-        next: () => {
-          this.snackBar.open('Vacation range deleted successfully', 'Close', { duration: 3000 });
-          this.loadRanges();
-          this.vacationDeleted.emit();
-        },
-        error: (error) => {
-          console.error('Error deleting vacation range:', error);
-          this.snackBar.open('Failed to delete vacation range', 'Close', { duration: 3000 });
-        }
-      });
-    }
+    this.dialogService.confirmDelete(message, 'Delete Vacation').subscribe(confirmed => {
+      if (confirmed) {
+        this.holidayService.deleteVacationRange(range.rangeId).subscribe({
+          next: () => {
+            this.snackBar.open('Vacation range deleted successfully', 'Close', { duration: 3000 });
+            this.loadRanges();
+            this.vacationDeleted.emit();
+          },
+          error: (error) => {
+            console.error('Error deleting vacation range:', error);
+            this.snackBar.open('Failed to delete vacation range', 'Close', { duration: 3000 });
+          }
+        });
+      }
+    });
   }
 
   editSingleDay(day: VacationDay): void {
@@ -468,19 +472,24 @@ export class VacationListComponent implements OnInit, OnChanges {
   }
 
   deleteSingleDay(day: VacationDay, range: VacationRange): void {
-    if (confirm(`Delete vacation day on ${this.formatDate(day.date)}?`)) {
-      this.holidayService.deleteVacationDay(day.date).subscribe({
-        next: () => {
-          this.snackBar.open('Vacation day deleted successfully', 'Close', { duration: 3000 });
-          this.loadRanges();
-          this.vacationDeleted.emit();
-        },
-        error: (error) => {
-          console.error('Error deleting vacation day:', error);
-          this.snackBar.open('Failed to delete vacation day', 'Close', { duration: 3000 });
-        }
-      });
-    }
+    this.dialogService.confirmDelete(
+      `Delete vacation day on ${this.formatDate(day.date)}?`,
+      'Delete Vacation Day'
+    ).subscribe(confirmed => {
+      if (confirmed) {
+        this.holidayService.deleteVacationDay(day.date).subscribe({
+          next: () => {
+            this.snackBar.open('Vacation day deleted successfully', 'Close', { duration: 3000 });
+            this.loadRanges();
+            this.vacationDeleted.emit();
+          },
+          error: (error) => {
+            console.error('Error deleting vacation day:', error);
+            this.snackBar.open('Failed to delete vacation day', 'Close', { duration: 3000 });
+          }
+        });
+      }
+    });
   }
 
   formatDate(dateStr: string): string {

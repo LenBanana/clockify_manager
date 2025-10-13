@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -12,9 +13,11 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
+import { firstValueFrom } from 'rxjs';
 import { ConfigService } from '../../../../core/services/config.service';
 import { AppConfig } from '../../../../core/models/config.model';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
+import { DialogService } from '../../../../core/services/dialog.service';
 
 @Component({
   selector: 'app-settings',
@@ -398,7 +401,9 @@ export class SettingsComponent implements OnInit {
 
   constructor(
     private configService: ConfigService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private router: Router,
+    private dialogService: DialogService
   ) {
     this.config = this.configService.getCurrentConfig();
   }
@@ -406,13 +411,13 @@ export class SettingsComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     // Load config
     try {
-      await this.configService.loadConfig().toPromise();
+      await firstValueFrom(this.configService.loadConfig());
       this.config = this.configService.getCurrentConfig();
       this.updateWorkingDaysFromConfig();
       this.updateEntryDateFromConfig();
       
       // Get config path
-      this.configPath = await this.configService.getConfigPath().toPromise() || '';
+      this.configPath = await firstValueFrom(this.configService.getConfigPath()) || '';
     } catch (error) {
       console.error('Failed to load config', error);
     }
@@ -448,7 +453,7 @@ export class SettingsComponent implements OnInit {
 
     try {
       this.updateConfigFromWorkingDays();
-      await this.configService.saveConfig(this.config).toPromise();
+      await firstValueFrom(this.configService.saveConfig(this.config));
       
       this.snackBar.open('Settings saved successfully!', 'Close', {
         duration: 3000,
@@ -473,20 +478,32 @@ export class SettingsComponent implements OnInit {
   }
 
   async resetToDefaults(): Promise<void> {
-    const confirmed = confirm('Are you sure you want to reset all settings to defaults? This cannot be undone.');
+    const confirmed = await firstValueFrom(this.dialogService.confirmWarning(
+      'Are you sure you want to reset all settings to defaults?\n\n' +
+      'This will:\n' +
+      '• Clear your API key and workspace\n' +
+      '• Reset work hours and schedule\n' +
+      '• Clear your location settings\n' +
+      '• Redirect you to the setup wizard\n\n' +
+      'Your vacation days will NOT be deleted.\n\n' +
+      'This action cannot be undone.',
+      'Reset All Settings'
+    ));
     
     if (confirmed) {
       try {
-        await this.configService.resetToDefaults().toPromise();
-        await this.configService.loadConfig().toPromise();
-        this.config = this.configService.getCurrentConfig();
-        this.updateWorkingDaysFromConfig();
+        await firstValueFrom(this.configService.resetToDefaults());
         
-        this.snackBar.open('Settings reset to defaults!', 'Close', {
-          duration: 3000,
+        this.snackBar.open('Settings reset! Redirecting to setup wizard...', 'Close', {
+          duration: 2000,
           horizontalPosition: 'center',
           verticalPosition: 'bottom',
         });
+        
+        // Redirect to setup wizard after a brief delay
+        setTimeout(() => {
+          this.router.navigate(['/setup']);
+        }, 2000);
       } catch (error: any) {
         this.snackBar.open(
           `Failed to reset settings: ${error.message}`,

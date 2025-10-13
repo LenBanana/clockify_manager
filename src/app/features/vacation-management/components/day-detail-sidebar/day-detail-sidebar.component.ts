@@ -17,6 +17,7 @@ import { TimeEntry } from '../../../../core/models/clockify.model';
 import { AddVacationDialogComponent } from '../add-vacation-dialog/add-vacation-dialog.component';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { DialogService } from '../../../../core/services/dialog.service';
 
 /**
  * Sidebar component showing detailed information for a selected calendar day
@@ -644,7 +645,8 @@ export class DayDetailSidebarComponent implements OnChanges {
     private clockifyService: ClockifyService,
     private configService: ConfigService,
     private dialog: MatDialog,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private dialogService: DialogService
   ) {}
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -794,19 +796,24 @@ export class DayDetailSidebarComponent implements OnChanges {
   deleteVacationDay(): void {
     if (!this.selectedDate) return;
 
-    if (confirm('Are you sure you want to delete this vacation day?')) {
-      this.holidayService.deleteVacationDay(this.selectedDate).subscribe({
-        next: () => {
-          this.snackBar.open('Vacation day deleted', 'Close', { duration: 3000 });
-          this.vacationAdded.emit();
-          this.loadDayDetails();
-        },
-        error: (error) => {
-          console.error('Error deleting vacation day:', error);
-          this.snackBar.open('Failed to delete vacation day', 'Close', { duration: 3000 });
-        }
-      });
-    }
+    this.dialogService.confirmDelete(
+      'Are you sure you want to delete this vacation day?',
+      'Delete Vacation Day'
+    ).subscribe(confirmed => {
+      if (confirmed) {
+        this.holidayService.deleteVacationDay(this.selectedDate!).subscribe({
+          next: () => {
+            this.snackBar.open('Vacation day deleted', 'Close', { duration: 3000 });
+            this.vacationAdded.emit();
+            this.loadDayDetails();
+          },
+          error: (error) => {
+            console.error('Error deleting vacation day:', error);
+            this.snackBar.open('Failed to delete vacation day', 'Close', { duration: 3000 });
+          }
+        });
+      }
+    });
   }
 
   deleteVacationOrRange(): void {
@@ -816,19 +823,21 @@ export class DayDetailSidebarComponent implements OnChanges {
     }
 
     const message = `Delete ${this.rangeDays.length} vacation days in this range?`;
-    if (confirm(message)) {
-      this.holidayService.deleteVacationRange(this.selectedRangeId).subscribe({
-        next: () => {
-          this.snackBar.open('Vacation range deleted', 'Close', { duration: 3000 });
-          this.vacationAdded.emit();
-          this.close.emit();
-        },
-        error: (error) => {
-          console.error('Error deleting vacation range:', error);
-          this.snackBar.open('Failed to delete vacation range', 'Close', { duration: 3000 });
-        }
-      });
-    }
+    this.dialogService.confirmDelete(message, 'Delete Vacation Range').subscribe(confirmed => {
+      if (confirmed) {
+        this.holidayService.deleteVacationRange(this.selectedRangeId!).subscribe({
+          next: () => {
+            this.snackBar.open('Vacation range deleted', 'Close', { duration: 3000 });
+            this.vacationAdded.emit();
+            this.close.emit();
+          },
+          error: (error) => {
+            console.error('Error deleting vacation range:', error);
+            this.snackBar.open('Failed to delete vacation range', 'Close', { duration: 3000 });
+          }
+        });
+      }
+    });
   }
 
   editRange(): void {
