@@ -129,6 +129,8 @@ html {
   // Surface colors
   --surface: #1e1e1e;
   --surface-container: #2e2e2e;
+  --surface-container-low: #424242;
+  --surface-container-high: #1e1e1e;
   --surface-variant: #424242;
   --on-surface: #e6e1e5;
   --on-surface-variant: #c4c4c4;
@@ -147,6 +149,8 @@ html {
 .light-theme, :root {
   --surface: #ffffff;
   --surface-container: #f5f5f5;
+  --surface-container-low: #f7f2fa;
+  --surface-container-high: #ffffff;
   --surface-variant: #e0e0e0;
   --on-surface: #1c1b1f;
   --on-surface-variant: #5f5f5f;

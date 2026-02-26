@@ -13,6 +13,7 @@ import { ClockifyService } from '../../../../core/services/clockify.service';
 import { HolidayService } from '../../../../core/services/holiday.service';
 import { OvertimeService } from '../../../../core/services/overtime.service';
 import { OvertimeReport } from '../../../../core/models/overtime.model';
+import { OvertimePayoff } from '../../../../core/models/config.model';
 import { firstValueFrom } from 'rxjs';
 
 /**
@@ -66,6 +67,8 @@ import { firstValueFrom } from 'rxjs';
           [report]="currentMonthReport"
           [startDate]="selectedStartDate"
           [endDate]="selectedEndDate"
+          [payoffs]="payoffs"
+          (payoffsChanged)="onPayoffsChanged($event)"
         ></app-period-overview>
 
         <!-- Daily Breakdown -->
@@ -145,6 +148,7 @@ export class DashboardHomeComponent implements OnInit {
   currentMonthReport: OvertimeReport | null = null;
   dailyBreakdown: any[] = [];
   projectBreakdown: any[] = [];
+  payoffs: OvertimePayoff[] = [];
 
   selectedStartDate = '';
   selectedEndDate = '';
@@ -157,13 +161,28 @@ export class DashboardHomeComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    // Don't load data here, wait for date range selector to emit
+    // Load payoffs from config on startup (they're independent of the date range)
+    this.payoffs = this.configService.getCurrentConfig().work_settings.overtime_payoffs ?? [];
   }
 
   onDateRangeChanged(event: { startDate: string; endDate: string }): void {
     this.selectedStartDate = event.startDate;
     this.selectedEndDate = event.endDate;
     this.loadDashboardData();
+  }
+
+  async onPayoffsChanged(payoffs: OvertimePayoff[]): Promise<void> {
+    const config = this.configService.getCurrentConfig();
+    const updatedConfig = {
+      ...config,
+      work_settings: { ...config.work_settings, overtime_payoffs: payoffs },
+    };
+    try {
+      await firstValueFrom(this.configService.saveConfig(updatedConfig));
+      this.payoffs = payoffs;
+    } catch (err: any) {
+      console.error('Failed to save overtime payoffs:', err);
+    }
   }
 
   async loadDashboardData(): Promise<void> {

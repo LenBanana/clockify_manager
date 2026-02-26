@@ -1,5 +1,19 @@
 // TypeScript models matching Rust config structures
 
+export interface OvertimePayoff {
+  id: string;
+  date: string;        // YYYY-MM-DD — when the company paid it off
+  hours: number;       // positive number of hours deducted
+  description: string; // optional label, e.g. "Q1 Settlement"
+}
+
+export interface WorkHoursPeriod {
+  id: string;
+  start_date: string;       // YYYY-MM-DD, inclusive
+  end_date: string | null;  // YYYY-MM-DD, inclusive; null = open-ended
+  daily_hours: number;
+}
+
 export interface AppConfig {
   clockify: ClockifyConfig;
   work_settings: WorkSettings;
@@ -14,12 +28,13 @@ export interface ClockifyConfig {
 }
 
 export interface WorkSettings {
-  daily_hours: number;
-  weekly_hours: number;
+  daily_hours: number;            // kept as fallback for migration
   working_days: string[];
   include_breaks: boolean;
   break_duration_minutes: number;
-  entry_date?: string | null; // Format: YYYY-MM-DD
+  entry_date?: string | null;     // Format: YYYY-MM-DD
+  work_hours_schedule: WorkHoursPeriod[];
+  overtime_payoffs: OvertimePayoff[];
 }
 
 export interface LocationSettings {
@@ -39,11 +54,12 @@ export const DEFAULT_CONFIG: AppConfig = {
   },
   work_settings: {
     daily_hours: 8,
-    weekly_hours: 40,
     working_days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
     include_breaks: true,
     break_duration_minutes: 30,
-    entry_date: null
+    entry_date: null,
+    work_hours_schedule: [],
+    overtime_payoffs: []
   },
   location: {
     bundesland_code: '',

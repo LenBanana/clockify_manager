@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, OnChanges, SimpleChanges, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -7,7 +7,10 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatDialog } from '@angular/material/dialog';
 import { OvertimeReport, DayBreakdown, ProjectBreakdown } from '../../../../core/models/overtime.model';
+import { OvertimePayoff } from '../../../../core/models/config.model';
+import { OvertimePayoffsDialogComponent } from '../overtime-payoffs-dialog/overtime-payoffs-dialog.component';
 
 interface DayWithImpact extends DayBreakdown {
   impact: number; // Absolute impact on overtime
@@ -45,6 +48,8 @@ export class PeriodOverviewComponent implements OnChanges {
   @Input() report: OvertimeReport | null = null;
   @Input() startDate: string = '';
   @Input() endDate: string = '';
+  @Input() payoffs: OvertimePayoff[] = [];
+  @Output() payoffsChanged = new EventEmitter<OvertimePayoff[]>();
 
   // Computed values
   periodTitle: string = '';
@@ -62,6 +67,33 @@ export class PeriodOverviewComponent implements OnChanges {
   // Constants
   readonly PREVIEW_LIMIT = 5;
   readonly INCOMPLETE_THRESHOLD = 2; // Hours threshold for incomplete days
+
+  constructor(private dialog: MatDialog) {}
+
+  get totalPayoffHours(): number {
+    return this.payoffs.reduce((sum, p) => sum + p.hours, 0);
+  }
+
+  get adjustedOvertimeHours(): number {
+    return (this.report?.overtimeHours ?? 0) - this.totalPayoffHours;
+  }
+
+  get hasPayoffs(): boolean {
+    return this.payoffs.length > 0;
+  }
+
+  openPayoffsDialog(): void {
+    const ref = this.dialog.open(OvertimePayoffsDialogComponent, {
+      data: { payoffs: this.payoffs },
+      autoFocus: false,
+      panelClass: 'payoffs-dialog-panel',
+    });
+    ref.afterClosed().subscribe((result: OvertimePayoff[] | undefined) => {
+      if (result !== undefined) {
+        this.payoffsChanged.emit(result);
+      }
+    });
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['report'] || changes['startDate'] || changes['endDate']) {
@@ -236,17 +268,19 @@ export class PeriodOverviewComponent implements OnChanges {
 
   getOvertimeStatus(): string {
     if (!this.report) return '';
-    if (this.report.overtimeHours > 5) return 'Well ahead';
-    if (this.report.overtimeHours > 0) return 'Ahead';
-    if (this.report.overtimeHours === 0) return 'On track';
-    if (this.report.overtimeHours > -5) return 'Slightly behind';
+    const hours = this.hasPayoffs ? this.adjustedOvertimeHours : this.report.overtimeHours;
+    if (hours > 5) return 'Well ahead';
+    if (hours > 0) return 'Ahead';
+    if (hours === 0) return 'On track';
+    if (hours > -5) return 'Slightly behind';
     return 'Behind';
   }
 
   getOvertimeIcon(): string {
     if (!this.report) return 'schedule';
-    if (this.report.overtimeHours > 0) return 'trending_up';
-    if (this.report.overtimeHours === 0) return 'trending_flat';
+    const hours = this.hasPayoffs ? this.adjustedOvertimeHours : this.report.overtimeHours;
+    if (hours > 0) return 'trending_up';
+    if (hours === 0) return 'trending_flat';
     return 'trending_down';
   }
 

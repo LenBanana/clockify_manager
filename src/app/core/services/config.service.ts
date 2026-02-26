@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, from, catchError, map, tap } from 'rxjs';
+import { BehaviorSubject, Observable, from, catchError, tap } from 'rxjs';
 import { invoke } from '@tauri-apps/api/core';
-import { AppConfig, DEFAULT_CONFIG, ClockifyConfig, WorkSettings, LocationSettings } from '../models/config.model';
+import { AppConfig, DEFAULT_CONFIG, ClockifyConfig, WorkSettings, LocationSettings, WorkHoursPeriod } from '../models/config.model';
 
 @Injectable({
   providedIn: 'root'
@@ -29,7 +29,7 @@ export class ConfigService {
 
     return from(invoke<AppConfig>('get_config')).pipe(
       tap(config => {
-        this.configSubject.next(config);
+        this.configSubject.next(this.migrateConfig(config));
         this.loadingSubject.next(false);
       }),
       catchError(error => {
@@ -159,5 +159,33 @@ export class ConfigService {
    */
   clearError(): void {
     this.errorSubject.next(null);
+  }
+
+  /**
+   * Migrate older config formats to current schema.
+   * - Populates work_hours_schedule from daily_hours if schedule is absent.
+   * - Removes any vestigial weekly_hours key that may exist in stored JSON.
+   */
+  private migrateConfig(config: AppConfig): AppConfig {
+    const ws = config.work_settings;
+
+    // Ensure the array exists (old configs serialised without the field)
+    if (!ws.work_hours_schedule || ws.work_hours_schedule.length === 0) {
+      const startDate = ws.entry_date ?? '2020-01-01';
+      const period: WorkHoursPeriod = {
+        id: crypto.randomUUID(),
+        start_date: startDate,
+        end_date: null,
+        daily_hours: ws.daily_hours ?? 8,
+      };
+      ws.work_hours_schedule = [period];
+    }
+
+    // Ensure overtime_payoffs array exists (old configs won't have this field)
+    if (!ws.overtime_payoffs) {
+      ws.overtime_payoffs = [];
+    }
+
+    return config;
   }
 }

@@ -8,12 +8,26 @@
     <!-- Main KPI Cards -->
     <div class="kpi-grid">
       <!-- Overtime Card -->
-      <div class="kpi-card" [class.positive]="report.overtimeHours >= 0" [class.negative]="report.overtimeHours < 0">
+      <div class="kpi-card"
+           [class.positive]="(hasPayoffs ? adjustedOvertimeHours : report.overtimeHours) >= 0"
+           [class.negative]="(hasPayoffs ? adjustedOvertimeHours : report.overtimeHours) < 0">
         <div class="kpi-header">
           <mat-icon>{{ getOvertimeIcon() }}</mat-icon>
           <span class="kpi-label">Overtime</span>
+          <button
+            mat-icon-button
+            class="payoff-btn"
+            [class.payoff-btn--active]="hasPayoffs"
+            matTooltip="{{ hasPayoffs ? 'Manage overtime payoffs (' + totalPayoffHours.toFixed(1) + 'h deducted)' : 'Record overtime payoff' }}"
+            (click)="openPayoffsDialog()"
+          >
+            <mat-icon>payments</mat-icon>
+          </button>
         </div>
-        <div class="kpi-value">{{ formatHours(report.overtimeHours) }}</div>
+        <div class="kpi-value">{{ formatHours(hasPayoffs ? adjustedOvertimeHours : report.overtimeHours) }}</div>
+        <div class="payoff-raw-line" *ngIf="hasPayoffs">
+          before payoffs: {{ formatHours(report.overtimeHours) }}
+        </div>
         <div class="kpi-status">{{ getOvertimeStatus() }}</div>
       </div>
 

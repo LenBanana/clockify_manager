@@ -3,6 +3,13 @@
 // Import custom theme
 @use 'theme.scss' as *;
 
+// Dialog: remove the outer rect that shows behind the rounded surface
+.payoffs-dialog-panel .mat-mdc-dialog-container {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
 html, body { 
   height: 100%; 
   margin: 0;

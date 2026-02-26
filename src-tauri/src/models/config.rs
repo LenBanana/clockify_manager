@@ -39,25 +39,54 @@ impl Default for ClockifyConfig {
     }
 }
 
+/// A single overtime payoff entry — hours paid off by the employer.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OvertimePayoff {
+    pub id: String,
+    /// Date the payoff was applied (YYYY-MM-DD)
+    pub date: String,
+    /// Hours deducted (positive value)
+    pub hours: f64,
+    /// Optional label, e.g. "Q1 Settlement"
+    #[serde(default)]
+    pub description: String,
+}
+
+/// A single contracted-hours period.
+/// Both `start_date` and `end_date` are **inclusive** (YYYY-MM-DD).
+/// `end_date = None` means the period is open-ended (no expiry).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkHoursPeriod {
+    pub id: String,
+    pub start_date: String,
+    pub end_date: Option<String>,
+    pub daily_hours: f64,
+}
+
 /// Work schedule settings
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkSettings {
+    /// Kept as a fallback for existing configs without a schedule.
     pub daily_hours: f64,
-    pub weekly_hours: f64,
     pub working_days: Vec<String>,
     pub include_breaks: bool,
     pub break_duration_minutes: u32,
-    /// Optional entry date - calculations only include data from this date onwards
+    /// Optional entry date — calculations only include data from this date onwards.
     /// Format: YYYY-MM-DD
     #[serde(default)]
     pub entry_date: Option<String>,
+    /// Time-bounded contracted hours. Supersedes `daily_hours` when non-empty.
+    #[serde(default)]
+    pub work_hours_schedule: Vec<WorkHoursPeriod>,
+    /// Overtime hours paid off by the employer — reduces the displayed balance.
+    #[serde(default)]
+    pub overtime_payoffs: Vec<OvertimePayoff>,
 }
 
 impl Default for WorkSettings {
     fn default() -> Self {
         Self {
             daily_hours: 8.0,
-            weekly_hours: 40.0,
             working_days: vec![
                 "monday".to_string(),
                 "tuesday".to_string(),
@@ -68,6 +97,8 @@ impl Default for WorkSettings {
             include_breaks: true,
             break_duration_minutes: 30,
             entry_date: None,
+            work_hours_schedule: Vec::new(),
+            overtime_payoffs: Vec::new(),
         }
     }
 }

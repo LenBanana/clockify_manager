@@ -27,16 +27,17 @@ import { WorkSettings } from '../../../../../core/models/config.model';
       <h3>Configure Work Settings</h3>
       <p class="step-description">
         Set your daily work hours and working days for accurate overtime calculation.
+        You can add more periods with different hours later in Settings.
       </p>
 
       <form [formGroup]="workSettingsForm" class="settings-form">
         <div class="form-section">
-          <h4>Daily Hours</h4>
+          <h4>Hours per Day</h4>
           <mat-form-field appearance="outline">
             <mat-label>Hours per Day</mat-label>
-            <input 
-              matInput 
-              type="number" 
+            <input
+              matInput
+              type="number"
               formControlName="dailyHours"
               min="1"
               max="24"
@@ -54,19 +55,6 @@ import { WorkSettings } from '../../../../../core/models/config.model';
               Cannot exceed 24 hours
             </mat-error>
           </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Hours per Week</mat-label>
-            <input 
-              matInput 
-              type="number" 
-              formControlName="weeklyHours"
-              min="1"
-              max="168"
-            />
-            <mat-icon matSuffix>date_range</mat-icon>
-            <mat-hint>Typically 40 hours for full-time</mat-hint>
-          </mat-form-field>
         </div>
 
         <div class="form-section">
@@ -83,14 +71,13 @@ import { WorkSettings } from '../../../../../core/models/config.model';
           </div>
         </div>
 
-        <div class="summary-card" *ngIf="workSettingsForm.valid">
+        <div class="summary-card" *ngIf="workSettingsForm.valid && getSelectedDaysCount() > 0">
           <mat-icon>info</mat-icon>
           <div class="summary-content">
-            <strong>Summary:</strong> You work {{workSettingsForm.get('dailyHours')?.value}} hours per day,
-            {{ getSelectedDaysCount() }} days per week.
-            <span *ngIf="workSettingsForm.get('includeBreaks')?.value">
-              Breaks of {{workSettingsForm.get('breakDuration')?.value}} minutes are included.
-            </span>
+            <strong>Summary:</strong>
+            {{ workSettingsForm.get('dailyHours')?.value }}h/day &times;
+            {{ getSelectedDaysCount() }} {{ getSelectedDaysCount() === 1 ? 'day' : 'days' }}/week
+            = <strong>{{ weeklyTotal }}h/week</strong>
           </div>
         </div>
       </form>
@@ -136,10 +123,6 @@ import { WorkSettings } from '../../../../../core/models/config.model';
     }
 
     mat-form-field {
-      margin-bottom: var(--spacing-md);
-    }
-
-    mat-slide-toggle {
       margin-bottom: var(--spacing-md);
     }
 
@@ -209,19 +192,17 @@ export class WorkSettingsStepComponent implements OnInit {
   ) {
     this.workSettingsForm = this.fb.group({
       dailyHours: [8, [Validators.required, Validators.min(1), Validators.max(24)]],
-      weeklyHours: [40, [Validators.required, Validators.min(1), Validators.max(168)]],
-      monday: [true],
-      tuesday: [true],
+      monday:    [true],
+      tuesday:   [true],
       wednesday: [true],
-      thursday: [true],
-      friday: [true],
-      saturday: [false],
-      sunday: [false],
-      includeBreaks: [true],
-      breakDuration: [30, [Validators.min(0), Validators.max(240)]],
+      thursday:  [true],
+      friday:    [true],
+      saturday:  [false],
+      sunday:    [false],
+      includeBreaks:  [true],
+      breakDuration:  [30, [Validators.min(0), Validators.max(240)]],
     });
 
-    // Emit changes
     this.workSettingsForm.valueChanges.subscribe(() => {
       if (this.workSettingsForm.valid) {
         this.settingsUpdated.emit(this.getWorkSettings());
@@ -230,58 +211,66 @@ export class WorkSettingsStepComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Pre-fill from existing config if available
     const config = this.configService.getCurrentConfig();
     if (config.work_settings) {
-      const settings = config.work_settings;
+      const s = config.work_settings;
+      // Use the first period's daily_hours if a schedule exists, otherwise fall back
+      const dailyHours = s.work_hours_schedule?.length
+        ? s.work_hours_schedule[0].daily_hours
+        : s.daily_hours;
+
       this.workSettingsForm.patchValue({
-        dailyHours: settings.daily_hours,
-        weeklyHours: settings.weekly_hours,
-        monday: settings.working_days.includes('monday'),
-        tuesday: settings.working_days.includes('tuesday'),
-        wednesday: settings.working_days.includes('wednesday'),
-        thursday: settings.working_days.includes('thursday'),
-        friday: settings.working_days.includes('friday'),
-        saturday: settings.working_days.includes('saturday'),
-        sunday: settings.working_days.includes('sunday'),
-        includeBreaks: settings.include_breaks,
-        breakDuration: settings.break_duration_minutes,
+        dailyHours,
+        monday:    s.working_days.includes('monday'),
+        tuesday:   s.working_days.includes('tuesday'),
+        wednesday: s.working_days.includes('wednesday'),
+        thursday:  s.working_days.includes('thursday'),
+        friday:    s.working_days.includes('friday'),
+        saturday:  s.working_days.includes('saturday'),
+        sunday:    s.working_days.includes('sunday'),
+        includeBreaks: s.include_breaks,
+        breakDuration: s.break_duration_minutes,
       });
     }
   }
 
   getWorkSettings(): WorkSettings {
-    const formValue = this.workSettingsForm.value;
+    const v = this.workSettingsForm.value;
     const working_days: string[] = [];
-
-    if (formValue.monday) working_days.push('monday');
-    if (formValue.tuesday) working_days.push('tuesday');
-    if (formValue.wednesday) working_days.push('wednesday');
-    if (formValue.thursday) working_days.push('thursday');
-    if (formValue.friday) working_days.push('friday');
-    if (formValue.saturday) working_days.push('saturday');
-    if (formValue.sunday) working_days.push('sunday');
+    if (v.monday)    working_days.push('monday');
+    if (v.tuesday)   working_days.push('tuesday');
+    if (v.wednesday) working_days.push('wednesday');
+    if (v.thursday)  working_days.push('thursday');
+    if (v.friday)    working_days.push('friday');
+    if (v.saturday)  working_days.push('saturday');
+    if (v.sunday)    working_days.push('sunday');
 
     return {
-      daily_hours: formValue.dailyHours,
-      weekly_hours: formValue.weeklyHours,
+      daily_hours: v.dailyHours,
       working_days,
-      include_breaks: formValue.includeBreaks,
-      break_duration_minutes: formValue.breakDuration,
+      include_breaks: v.includeBreaks,
+      break_duration_minutes: v.breakDuration,
+      // Create the initial open-ended period from the wizard value.
+      // The user can refine their schedule later in Settings.
+      work_hours_schedule: [{
+        id: crypto.randomUUID(),
+        start_date: '2020-01-01',
+        end_date: null,
+        daily_hours: v.dailyHours,
+      }],
+      overtime_payoffs: [],
     };
   }
 
   getSelectedDaysCount(): number {
-    const formValue = this.workSettingsForm.value;
-    return [
-      formValue.monday,
-      formValue.tuesday,
-      formValue.wednesday,
-      formValue.thursday,
-      formValue.friday,
-      formValue.saturday,
-      formValue.sunday,
-    ].filter(Boolean).length;
+    const v = this.workSettingsForm.value;
+    return [v.monday, v.tuesday, v.wednesday, v.thursday, v.friday, v.saturday, v.sunday]
+      .filter(Boolean).length;
+  }
+
+  get weeklyTotal(): number {
+    const daily = this.workSettingsForm.get('dailyHours')?.value ?? 0;
+    return Math.round(daily * this.getSelectedDaysCount() * 10) / 10;
   }
 
   get isValid(): boolean {

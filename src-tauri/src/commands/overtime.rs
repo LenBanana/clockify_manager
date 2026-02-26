@@ -101,7 +101,6 @@ mod tests {
     fn create_test_work_settings() -> WorkSettings {
         WorkSettings {
             daily_hours: 8.0,
-            weekly_hours: 40.0,
             working_days: vec![
                 "monday".to_string(),
                 "tuesday".to_string(),
@@ -111,6 +110,8 @@ mod tests {
             ],
             include_breaks: true,
             break_duration_minutes: 30,
+            entry_date: None,
+            work_hours_schedule: vec![],
         }
     }
 

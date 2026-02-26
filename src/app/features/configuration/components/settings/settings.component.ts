@@ -18,6 +18,17 @@ import { ConfigService } from '../../../../core/services/config.service';
 import { AppConfig } from '../../../../core/models/config.model';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 import { DialogService } from '../../../../core/services/dialog.service';
+import { WorkHoursScheduleComponent } from '../work-hours-schedule/work-hours-schedule.component';
+
+interface WorkingDaysState {
+  monday: boolean;
+  tuesday: boolean;
+  wednesday: boolean;
+  thursday: boolean;
+  friday: boolean;
+  saturday: boolean;
+  sunday: boolean;
+}
 
 @Component({
   selector: 'app-settings',
@@ -36,33 +47,35 @@ import { DialogService } from '../../../../core/services/dialog.service';
     MatSnackBarModule,
     MatDatepickerModule,
     MatNativeDateModule,
-    PageHeaderComponent
+    PageHeaderComponent,
+    WorkHoursScheduleComponent,
   ],
   template: `
     <div class="settings-container">
       <!-- Header -->
-      <app-page-header 
+      <app-page-header
         title="Settings"
         subtitle="Manage your Clockify Overtime Tracker configuration"
       >
       </app-page-header>
 
       <mat-tab-group animationDuration="300ms" class="settings-tabs">
-        <!-- Clockify Settings Tab -->
+
+        <!-- ── Clockify Tab ────────────────────────────────────── -->
         <mat-tab label="Clockify">
           <div class="tab-content">
             <h3>Clockify Integration</h3>
             <p>Configure your Clockify API connection and workspace.</p>
-            
+
             <div class="setting-section">
               <h4>API Configuration</h4>
               <p class="section-description">Your Clockify API key is stored locally and never shared.</p>
-              
+
               <mat-form-field appearance="outline">
                 <mat-label>API Key</mat-label>
-                <input 
-                  matInput 
-                  type="password" 
+                <input
+                  matInput
+                  type="password"
                   [(ngModel)]="config.clockify.api_key"
                   placeholder="Your Clockify API key"
                 />
@@ -71,9 +84,9 @@ import { DialogService } from '../../../../core/services/dialog.service';
 
               <mat-form-field appearance="outline">
                 <mat-label>Base URL</mat-label>
-                <input 
-                  matInput 
-                  type="text" 
+                <input
+                  matInput
+                  type="text"
                   [(ngModel)]="config.clockify.base_url"
                   placeholder="https://api.clockify.me/api/v1"
                 />
@@ -82,9 +95,9 @@ import { DialogService } from '../../../../core/services/dialog.service';
 
               <mat-form-field appearance="outline">
                 <mat-label>Workspace ID</mat-label>
-                <input 
-                  matInput 
-                  type="text" 
+                <input
+                  matInput
+                  type="text"
                   [(ngModel)]="config.clockify.workspace_id"
                   [disabled]="true"
                 />
@@ -95,16 +108,16 @@ import { DialogService } from '../../../../core/services/dialog.service';
           </div>
         </mat-tab>
 
-        <!-- Location Settings Tab -->
+        <!-- ── Location Tab ───────────────────────────────────── -->
         <mat-tab label="Location">
           <div class="tab-content">
             <h3>Location Settings</h3>
             <p>Set your federal state for accurate holiday calculations.</p>
-            
+
             <div class="setting-section">
               <h4>Bundesland</h4>
               <p class="section-description">This determines which public holidays apply to you.</p>
-              
+
               <mat-form-field appearance="outline">
                 <mat-label>Bundesland</mat-label>
                 <mat-select [(ngModel)]="config.location.bundesland_code">
@@ -118,68 +131,63 @@ import { DialogService } from '../../../../core/services/dialog.service';
           </div>
         </mat-tab>
 
-        <!-- Work Settings Tab -->
+        <!-- ── Work Settings Tab ──────────────────────────────── -->
         <mat-tab label="Work Settings">
           <div class="tab-content">
             <h3>Work Schedule</h3>
-            <p>Define your working hours and days.</p>
-            
-            <div class="setting-section">
-              <h4>Working Hours</h4>
-              
-              <mat-form-field appearance="outline">
-                <mat-label>Daily Hours</mat-label>
-                <input 
-                  matInput 
-                  type="number" 
-                  [(ngModel)]="config.work_settings.daily_hours"
-                  min="1"
-                  max="24"
-                  step="0.5"
-                />
-                <mat-icon matSuffix>schedule</mat-icon>
-              </mat-form-field>
+            <p>Define your working days and contracted hours per period.</p>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Weekly Hours</mat-label>
-                <input 
-                  matInput 
-                  type="number" 
-                  [(ngModel)]="config.work_settings.weekly_hours"
-                  min="1"
-                  max="168"
-                />
-                <mat-icon matSuffix>date_range</mat-icon>
-              </mat-form-field>
-            </div>
-
+            <!-- Working Days -->
             <div class="setting-section">
               <h4>Working Days</h4>
+              <p class="section-description">
+                Select the days you are normally required to work. This affects the
+                weekly hours summary shown in each period below.
+              </p>
               <div class="checkbox-group">
-                <mat-checkbox [(ngModel)]="workingDays.monday">Monday</mat-checkbox>
-                <mat-checkbox [(ngModel)]="workingDays.tuesday">Tuesday</mat-checkbox>
-                <mat-checkbox [(ngModel)]="workingDays.wednesday">Wednesday</mat-checkbox>
-                <mat-checkbox [(ngModel)]="workingDays.thursday">Thursday</mat-checkbox>
-                <mat-checkbox [(ngModel)]="workingDays.friday">Friday</mat-checkbox>
-                <mat-checkbox [(ngModel)]="workingDays.saturday">Saturday</mat-checkbox>
-                <mat-checkbox [(ngModel)]="workingDays.sunday">Sunday</mat-checkbox>
+                <mat-checkbox [(ngModel)]="workingDays.monday"    (ngModelChange)="onWorkingDaysChange()">Monday</mat-checkbox>
+                <mat-checkbox [(ngModel)]="workingDays.tuesday"   (ngModelChange)="onWorkingDaysChange()">Tuesday</mat-checkbox>
+                <mat-checkbox [(ngModel)]="workingDays.wednesday" (ngModelChange)="onWorkingDaysChange()">Wednesday</mat-checkbox>
+                <mat-checkbox [(ngModel)]="workingDays.thursday"  (ngModelChange)="onWorkingDaysChange()">Thursday</mat-checkbox>
+                <mat-checkbox [(ngModel)]="workingDays.friday"    (ngModelChange)="onWorkingDaysChange()">Friday</mat-checkbox>
+                <mat-checkbox [(ngModel)]="workingDays.saturday"  (ngModelChange)="onWorkingDaysChange()">Saturday</mat-checkbox>
+                <mat-checkbox [(ngModel)]="workingDays.sunday"    (ngModelChange)="onWorkingDaysChange()">Sunday</mat-checkbox>
               </div>
             </div>
 
+            <!-- Working Hours Schedule -->
+            <div class="setting-section">
+              <h4>Working Hours Schedule</h4>
+              <p class="section-description">
+                Define how many hours per day you are contracted to work.
+                Each period runs from its start date until the next period begins
+                (or indefinitely if open-ended). Add multiple periods when your
+                contract changes over time.
+              </p>
+
+              <app-work-hours-schedule
+                [schedule]="config.work_settings.work_hours_schedule"
+                [workingDaysCount]="workingDaysCount"
+                (scheduleChange)="config.work_settings.work_hours_schedule = $event">
+              </app-work-hours-schedule>
+            </div>
+
+            <!-- Entry Date -->
             <div class="setting-section">
               <h4>Entry Date</h4>
               <p class="section-description">
-                Set your company entry date. Only time entries from this date onwards will be included in calculations.
+                Set your company entry date. Only time entries from this date onwards
+                will be included in calculations.
               </p>
-              
+
               <mat-slide-toggle [(ngModel)]="hasEntryDate" (change)="onEntryDateToggle()">
                 Set a specific entry date
               </mat-slide-toggle>
 
               <mat-form-field appearance="outline" *ngIf="hasEntryDate" class="entry-date-field">
                 <mat-label>Entry Date</mat-label>
-                <input 
-                  matInput 
+                <input
+                  matInput
                   [matDatepicker]="entryPicker"
                   [(ngModel)]="entryDateObj"
                   (ngModelChange)="onEntryDateChange()"
@@ -191,8 +199,10 @@ import { DialogService } from '../../../../core/services/dialog.service';
                 <mat-hint>Select the date you started at the company</mat-hint>
               </mat-form-field>
             </div>
+
           </div>
         </mat-tab>
+
       </mat-tab-group>
 
       <!-- Action Buttons -->
@@ -271,47 +281,6 @@ import { DialogService } from '../../../../core/services/dialog.service';
       margin-top: var(--spacing-md);
     }
 
-    .about-section {
-      display: flex;
-      flex-direction: column;
-      gap: var(--spacing-md);
-    }
-
-    .about-card {
-      display: flex;
-      gap: var(--spacing-md);
-      padding: var(--spacing-lg);
-      background-color: #f5f5f5;
-      border-radius: var(--border-radius-md);
-      align-items: flex-start;
-    }
-
-    .about-card mat-icon {
-      color: var(--primary-color);
-      font-size: 2rem;
-      width: 2rem;
-      height: 2rem;
-    }
-
-    .about-card h4 {
-      margin: 0 0 var(--spacing-xs) 0;
-      color: rgba(0, 0, 0, 0.87);
-    }
-
-    .about-card p {
-      margin: var(--spacing-xs) 0;
-      color: rgba(0, 0, 0, 0.6);
-      font-size: var(--font-size-sm);
-    }
-
-    .about-card code {
-      background-color: rgba(0, 0, 0, 0.05);
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-size: 0.85em;
-      word-break: break-all;
-    }
-
     .actions-footer {
       display: flex;
       align-items: center;
@@ -325,24 +294,17 @@ import { DialogService } from '../../../../core/services/dialog.service';
     }
 
     :host-context(.dark-theme) .tab-content h3,
-    :host-context(.dark-theme) .setting-section h4,
-    :host-context(.dark-theme) .about-card h4 {
+    :host-context(.dark-theme) .setting-section h4 {
       color: rgba(255, 255, 255, 0.87);
     }
 
     :host-context(.dark-theme) .tab-content > p,
-    :host-context(.dark-theme) .section-description,
-    :host-context(.dark-theme) .about-card p {
+    :host-context(.dark-theme) .section-description {
       color: rgba(255, 255, 255, 0.6);
     }
 
-    :host-context(.dark-theme) .setting-section,
-    :host-context(.dark-theme) .about-card {
+    :host-context(.dark-theme) .setting-section {
       background-color: #424242;
-    }
-
-    :host-context(.dark-theme) .about-card code {
-      background-color: rgba(255, 255, 255, 0.1);
     }
 
     :host-context(.dark-theme) .actions-footer {
@@ -352,14 +314,15 @@ import { DialogService } from '../../../../core/services/dialog.service';
 })
 export class SettingsComponent implements OnInit {
   config: AppConfig;
-  workingDays: any = {};
+  workingDays: WorkingDaysState = {
+    monday: false, tuesday: false, wednesday: false, thursday: false,
+    friday: false, saturday: false, sunday: false,
+  };
   saving = false;
-  configPath: string = '';
-  
-  // Entry date properties
+
   hasEntryDate = false;
   entryDateObj: Date | null = null;
-  maxEntryDate = new Date(); // Can't set entry date in future
+  maxEntryDate = new Date();
 
   bundeslaender = [
     { code: 'BW', name: 'Baden-Württemberg' },
@@ -380,130 +343,61 @@ export class SettingsComponent implements OnInit {
     { code: 'TH', name: 'Thüringen' },
   ];
 
+  get workingDaysCount(): number {
+    return Object.values(this.workingDays).filter(Boolean).length;
+  }
+
   constructor(
     private configService: ConfigService,
     private snackBar: MatSnackBar,
     private router: Router,
-    private dialogService: DialogService
+    private dialogService: DialogService,
   ) {
     this.config = this.configService.getCurrentConfig();
   }
 
   async ngOnInit(): Promise<void> {
-    // Load config
     try {
       await firstValueFrom(this.configService.loadConfig());
       this.config = this.configService.getCurrentConfig();
       this.updateWorkingDaysFromConfig();
       this.updateEntryDateFromConfig();
-      
-      // Get config path
-      this.configPath = await firstValueFrom(this.configService.getConfigPath()) || '';
     } catch (error) {
       console.error('Failed to load config', error);
     }
   }
 
+  // ── Working days ───────────────────────────────────────────────────────────
+
   updateWorkingDaysFromConfig(): void {
     const days = this.config.work_settings.working_days;
     this.workingDays = {
-      monday: days.includes('monday'),
-      tuesday: days.includes('tuesday'),
+      monday:    days.includes('monday'),
+      tuesday:   days.includes('tuesday'),
       wednesday: days.includes('wednesday'),
-      thursday: days.includes('thursday'),
-      friday: days.includes('friday'),
-      saturday: days.includes('saturday'),
-      sunday: days.includes('sunday'),
+      thursday:  days.includes('thursday'),
+      friday:    days.includes('friday'),
+      saturday:  days.includes('saturday'),
+      sunday:    days.includes('sunday'),
     };
   }
 
   updateConfigFromWorkingDays(): void {
-    const days: string[] = [];
-    if (this.workingDays.monday) days.push('monday');
-    if (this.workingDays.tuesday) days.push('tuesday');
-    if (this.workingDays.wednesday) days.push('wednesday');
-    if (this.workingDays.thursday) days.push('thursday');
-    if (this.workingDays.friday) days.push('friday');
-    if (this.workingDays.saturday) days.push('saturday');
-    if (this.workingDays.sunday) days.push('sunday');
-    this.config.work_settings.working_days = days;
+    const order: (keyof WorkingDaysState)[] =
+      ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    this.config.work_settings.working_days = order.filter(d => this.workingDays[d]);
   }
 
-  async saveSettings(): Promise<void> {
-    this.saving = true;
-
-    try {
-      this.updateConfigFromWorkingDays();
-      await firstValueFrom(this.configService.saveConfig(this.config));
-      
-      this.snackBar.open('Settings saved successfully!', 'Close', {
-        duration: 3000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom',
-      });
-      
-      this.saving = false;
-    } catch (error: any) {
-      this.snackBar.open(
-        `Failed to save settings: ${error.message}`,
-        'Close',
-        {
-          duration: 5000,
-          horizontalPosition: 'center',
-          verticalPosition: 'bottom',
-          panelClass: ['error-snackbar']
-        }
-      );
-      this.saving = false;
-    }
+  onWorkingDaysChange(): void {
+    this.updateConfigFromWorkingDays();
   }
 
-  async resetToDefaults(): Promise<void> {
-    const confirmed = await firstValueFrom(this.dialogService.confirmWarning(
-      'Are you sure you want to reset all settings to defaults?\n\n' +
-      'This will:\n' +
-      '• Clear your API key and workspace\n' +
-      '• Reset work hours and schedule\n' +
-      '• Clear your location settings\n' +
-      '• Redirect you to the setup wizard\n\n' +
-      'Your vacation days will NOT be deleted.\n\n' +
-      'This action cannot be undone.',
-      'Reset All Settings'
-    ));
-    
-    if (confirmed) {
-      try {
-        await firstValueFrom(this.configService.resetToDefaults());
-        
-        this.snackBar.open('Settings reset! Redirecting to setup wizard...', 'Close', {
-          duration: 2000,
-          horizontalPosition: 'center',
-          verticalPosition: 'bottom',
-        });
-        
-        // Redirect to setup wizard after a brief delay
-        setTimeout(() => {
-          this.router.navigate(['/setup']);
-        }, 2000);
-      } catch (error: any) {
-        this.snackBar.open(
-          `Failed to reset settings: ${error.message}`,
-          'Close',
-          {
-            duration: 5000,
-            horizontalPosition: 'center',
-            verticalPosition: 'bottom',
-            panelClass: ['error-snackbar']
-          }
-        );
-      }
-    }
-  }
+  // ── Entry date ─────────────────────────────────────────────────────────────
 
   updateEntryDateFromConfig(): void {
     if (this.config.work_settings.entry_date) {
       this.hasEntryDate = true;
-      this.entryDateObj = new Date(this.config.work_settings.entry_date);
+      this.entryDateObj = new Date(this.config.work_settings.entry_date + 'T00:00:00');
     } else {
       this.hasEntryDate = false;
       this.entryDateObj = null;
@@ -519,13 +413,69 @@ export class SettingsComponent implements OnInit {
 
   onEntryDateChange(): void {
     if (this.entryDateObj) {
-      // Format as YYYY-MM-DD
-      const year = this.entryDateObj.getFullYear();
-      const month = String(this.entryDateObj.getMonth() + 1).padStart(2, '0');
-      const day = String(this.entryDateObj.getDate()).padStart(2, '0');
-      this.config.work_settings.entry_date = `${year}-${month}-${day}`;
+      const y = this.entryDateObj.getFullYear();
+      const m = String(this.entryDateObj.getMonth() + 1).padStart(2, '0');
+      const d = String(this.entryDateObj.getDate()).padStart(2, '0');
+      this.config.work_settings.entry_date = `${y}-${m}-${d}`;
     } else {
       this.config.work_settings.entry_date = null;
+    }
+  }
+
+  // ── Save / Reset ───────────────────────────────────────────────────────────
+
+  async saveSettings(): Promise<void> {
+    this.saving = true;
+    try {
+      this.updateConfigFromWorkingDays();
+      await firstValueFrom(this.configService.saveConfig(this.config));
+      this.snackBar.open('Settings saved successfully!', 'Close', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+    } catch (error: any) {
+      this.snackBar.open(`Failed to save settings: ${error.message}`, 'Close', {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+        panelClass: ['error-snackbar'],
+      });
+    } finally {
+      this.saving = false;
+    }
+  }
+
+  async resetToDefaults(): Promise<void> {
+    const confirmed = await firstValueFrom(this.dialogService.confirmWarning(
+      'Are you sure you want to reset all settings to defaults?\n\n' +
+      'This will:\n' +
+      '• Clear your API key and workspace\n' +
+      '• Reset work hours schedule\n' +
+      '• Clear your location settings\n' +
+      '• Redirect you to the setup wizard\n\n' +
+      'Your vacation days will NOT be deleted.\n\n' +
+      'This action cannot be undone.',
+      'Reset All Settings',
+    ));
+
+    if (confirmed) {
+      try {
+        await firstValueFrom(this.configService.resetToDefaults());
+        this.snackBar.open('Settings reset! Redirecting to setup wizard...', 'Close', {
+          duration: 2000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom',
+        });
+        setTimeout(() => this.router.navigate(['/setup']), 2000);
+      } catch (error: any) {
+        this.snackBar.open(`Failed to reset settings: ${error.message}`, 'Close', {
+          duration: 5000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom',
+          panelClass: ['error-snackbar'],
+        });
+      }
     }
   }
 }

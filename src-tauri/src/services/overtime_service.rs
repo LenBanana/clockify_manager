@@ -13,20 +13,65 @@ use std::collections::HashMap;
 pub struct OvertimeService;
 
 impl OvertimeService {
-    /// Calculate expected work hours for a specific day based on its type
-    pub fn calculate_expected_hours(day_type: DayType, work_settings: &WorkSettings) -> f64 {
+    /// Return the contracted daily hours for a specific calendar date.
+    ///
+    /// Walks `work_settings.work_hours_schedule` (sorted by `start_date` ascending)
+    /// and returns the `daily_hours` of the first period whose inclusive date range
+    /// covers `date`.  Falls back to `work_settings.daily_hours` when the schedule
+    /// is empty or no period matches.
+    pub fn get_daily_hours_for_date(date: &NaiveDate, work_settings: &WorkSettings) -> f64 {
+        // Sort a local copy so callers don't need to pre-sort.
+        let mut periods = work_settings.work_hours_schedule.clone();
+        periods.sort_by(|a, b| a.start_date.cmp(&b.start_date));
+
+        for period in &periods {
+            let start = match parse_date(&period.start_date) {
+                Ok(d) => d,
+                Err(_) => continue,
+            };
+
+            if *date < start {
+                continue;
+            }
+
+            if let Some(ref end_str) = period.end_date {
+                match parse_date(end_str) {
+                    // end_date is inclusive — skip if date is strictly after it
+                    Ok(end) => {
+                        if *date > end {
+                            continue;
+                        }
+                    }
+                    Err(_) => continue,
+                }
+            }
+
+            return period.daily_hours;
+        }
+
+        // Fallback: use the flat daily_hours value (supports old configs / empty schedule)
+        work_settings.daily_hours
+    }
+
+    /// Calculate expected work hours for a specific day based on its type and date.
+    pub fn calculate_expected_hours(
+        day_type: DayType,
+        work_settings: &WorkSettings,
+        date: &NaiveDate,
+    ) -> f64 {
         match day_type {
-            DayType::WorkDay => work_settings.daily_hours,
-            DayType::Training => work_settings.daily_hours, // Training days count as work days
-            DayType::BusinessTrip => work_settings.daily_hours, // Business trip has normal expected hours
-            DayType::Saldo => work_settings.daily_hours, // Saldo day has normal expected hours (creates deficit)
-            _ => 0.0, // Weekend, holidays, vacation, sick days = no expected work
+            DayType::WorkDay => Self::get_daily_hours_for_date(date, work_settings),
+            DayType::Training => Self::get_daily_hours_for_date(date, work_settings),
+            DayType::BusinessTrip => Self::get_daily_hours_for_date(date, work_settings),
+            DayType::Saldo => Self::get_daily_hours_for_date(date, work_settings),
+            // Weekend, public holidays, vacation, sick days — no expected work
+            _ => 0.0,
         }
     }
 
-    /// Sum actual hours worked on a specific date from time entries
-    /// Skips running timers (entries with null end time or null duration)
-    /// Groups entries by start date (midnight-spanning entries counted on start date)
+    /// Sum actual hours worked on a specific date from time entries.
+    /// Skips running timers (entries with null end time or null duration).
+    /// Groups entries by start date (midnight-spanning entries counted on start date).
     pub fn sum_time_entries_for_day(date: &NaiveDate, time_entries: &[TimeEntry]) -> f64 {
         time_entries
             .iter()
@@ -134,8 +179,8 @@ impl OvertimeService {
 
         for date in dates {
             let day_type = classify_day(&date, &work_settings.working_days, public_holidays, vacation_days);
-            let expected_hours = Self::calculate_expected_hours(day_type, work_settings);
-            
+            let expected_hours = Self::calculate_expected_hours(day_type, work_settings, &date);
+
             // For BusinessTrip days, use the worked_hours field instead of summing time entries
             let actual_hours = if day_type == DayType::BusinessTrip {
                 get_vacation_day(&date, vacation_days)
@@ -144,7 +189,7 @@ impl OvertimeService {
             } else {
                 Self::sum_time_entries_for_day(&date, time_entries)
             };
-            
+
             let overtime_hours = actual_hours - expected_hours;
             let projects_worked = Self::get_project_times_for_day(&date, time_entries, projects);
             let time_entries_count = Self::count_time_entries_for_day(&date, time_entries);
@@ -339,7 +384,6 @@ mod tests {
     fn create_test_work_settings() -> WorkSettings {
         WorkSettings {
             daily_hours: 8.0,
-            weekly_hours: 40.0,
             working_days: vec![
                 "monday".to_string(),
                 "tuesday".to_string(),
@@ -350,6 +394,7 @@ mod tests {
             include_breaks: true,
             break_duration_minutes: 30,
             entry_date: None,
+            work_hours_schedule: vec![],
         }
     }
 
@@ -381,35 +426,61 @@ mod tests {
     }
 
     #[test]
-    fn test_calculate_expected_hours() {
-        let work_settings = create_test_work_settings();
+    fn test_calculate_expected_hours_uses_schedule() {
+        use crate::models::config::WorkHoursPeriod;
+
+        let mut work_settings = create_test_work_settings();
+        work_settings.work_hours_schedule = vec![
+            WorkHoursPeriod {
+                id: "p1".to_string(),
+                start_date: "2024-01-01".to_string(),
+                end_date: Some("2024-02-29".to_string()),
+                daily_hours: 6.0,
+            },
+            WorkHoursPeriod {
+                id: "p2".to_string(),
+                start_date: "2024-03-01".to_string(),
+                end_date: None,
+                daily_hours: 8.0,
+            },
+        ];
+
+        let jan_date = NaiveDate::from_ymd_opt(2024, 1, 15).unwrap();
+        let mar_date = NaiveDate::from_ymd_opt(2024, 3, 15).unwrap();
 
         assert_eq!(
-            OvertimeService::calculate_expected_hours(DayType::WorkDay, &work_settings),
+            OvertimeService::calculate_expected_hours(DayType::WorkDay, &work_settings, &jan_date),
+            6.0
+        );
+        assert_eq!(
+            OvertimeService::calculate_expected_hours(DayType::WorkDay, &work_settings, &mar_date),
             8.0
         );
         assert_eq!(
-            OvertimeService::calculate_expected_hours(DayType::Training, &work_settings),
+            OvertimeService::calculate_expected_hours(DayType::Weekend, &work_settings, &jan_date),
+            0.0
+        );
+        assert_eq!(
+            OvertimeService::calculate_expected_hours(DayType::Vacation, &work_settings, &jan_date),
+            0.0
+        );
+    }
+
+    #[test]
+    fn test_calculate_expected_hours_fallback() {
+        // Empty schedule → falls back to work_settings.daily_hours
+        let work_settings = create_test_work_settings(); // daily_hours = 8, schedule = []
+        let date = NaiveDate::from_ymd_opt(2025, 10, 8).unwrap();
+        assert_eq!(
+            OvertimeService::calculate_expected_hours(DayType::WorkDay, &work_settings, &date),
             8.0
-        );
-        assert_eq!(
-            OvertimeService::calculate_expected_hours(DayType::Weekend, &work_settings),
-            0.0
-        );
-        assert_eq!(
-            OvertimeService::calculate_expected_hours(DayType::PublicHoliday, &work_settings),
-            0.0
-        );
-        assert_eq!(
-            OvertimeService::calculate_expected_hours(DayType::Vacation, &work_settings),
-            0.0
         );
     }
 
     #[test]
     fn test_sum_time_entries_for_day() {
         let date = NaiveDate::from_ymd_opt(2025, 10, 8).unwrap();
-        
+
         let entries = vec![
             create_test_time_entry("2025-10-08T09:00:00Z", "PT8H"),
             create_test_time_entry("2025-10-08T17:00:00Z", "PT2H"),
@@ -423,9 +494,9 @@ mod tests {
     #[test]
     fn test_sum_time_entries_skips_running_timers() {
         let date = NaiveDate::from_ymd_opt(2025, 10, 8).unwrap();
-        
+
         let start_dt: DateTime<Utc> = "2025-10-08T09:00:00Z".parse().unwrap();
-        
+
         let running_entry = TimeEntry {
             id: "test-id".to_string(),
             description: Some("Running timer".to_string()),
@@ -462,7 +533,7 @@ mod tests {
         let work_settings = create_test_work_settings();
         let public_holidays = vec![];
         let vacation_days = vec![];
-        let projects = vec![Project {
+        let projects = vec![crate::models::clockify::Project {
             id: "project-1".to_string(),
             name: "Test Project".to_string(),
             client_id: None,
