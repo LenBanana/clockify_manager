@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use chrono::NaiveDate;
+use serde::{Deserialize, Serialize};
 
 /// German states (Bundesländer) with their official codes
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -316,6 +316,9 @@ mod tests {
     fn test_german_state_name() {
         assert_eq!(GermanState::Bayern.name(), "Bayern");
         assert_eq!(GermanState::BadenWuerttemberg.name(), "Baden-Württemberg");
-        assert_eq!(GermanState::NordrheinWestfalen.name(), "Nordrhein-Westfalen");
+        assert_eq!(
+            GermanState::NordrheinWestfalen.name(),
+            "Nordrhein-Westfalen"
+        );
     }
 }

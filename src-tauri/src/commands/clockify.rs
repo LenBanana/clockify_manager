@@ -1,15 +1,12 @@
 use crate::error::AppResult;
-use crate::models::clockify::{Project, TimeEntry, Workspace, User};
+use crate::models::clockify::{Project, TimeEntry, User, Workspace};
 use crate::services::clockify_service::ClockifyService;
 use chrono::{DateTime, Utc};
 use tauri::AppHandle;
 
 /// Validate Clockify API key
 #[tauri::command]
-pub async fn validate_clockify_api_key(
-    _app: AppHandle,
-    api_key: String,
-) -> AppResult<bool> {
+pub async fn validate_clockify_api_key(_app: AppHandle, api_key: String) -> AppResult<bool> {
     let service = ClockifyService::new(api_key, None)?;
     service.validate_api_key().await
 }

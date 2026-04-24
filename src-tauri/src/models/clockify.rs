@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 /// Clockify workspace information
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -194,7 +194,8 @@ pub fn parse_duration_to_hours(duration: &str) -> Result<f64, String> {
     }
 
     // Remove PT prefix
-    let duration = duration.strip_prefix("PT")
+    let duration = duration
+        .strip_prefix("PT")
         .ok_or_else(|| format!("Invalid duration format: {}", duration))?;
 
     let mut hours = 0.0;
@@ -207,16 +208,17 @@ pub fn parse_duration_to_hours(duration: &str) -> Result<f64, String> {
         if ch.is_ascii_digit() || ch == '.' {
             current_number.push(ch);
         } else {
-            let value: f64 = current_number.parse()
+            let value: f64 = current_number
+                .parse()
                 .map_err(|_| format!("Invalid number in duration: {}", current_number))?;
-            
+
             match ch {
                 'H' => hours = value,
                 'M' => minutes = value,
                 'S' => seconds = value,
                 _ => return Err(format!("Unknown duration unit: {}", ch)),
             }
-            
+
             current_number.clear();
         }
     }

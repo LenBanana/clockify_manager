@@ -84,7 +84,10 @@ export class PeriodOverviewComponent implements OnChanges {
 
   openPayoffsDialog(): void {
     const ref = this.dialog.open(OvertimePayoffsDialogComponent, {
-      data: { payoffs: this.payoffs },
+      data: {
+        payoffs: this.payoffs,
+        dailyBreakdown: this.report?.dailyBreakdown ?? [],
+      },
       autoFocus: false,
       panelClass: 'payoffs-dialog-panel',
     });

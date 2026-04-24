@@ -1,10 +1,24 @@
 // TypeScript models matching Rust config structures
 
+/** One day's contribution to a payoff (FIFO allocation). */
+export interface OvertimePayoffAllocation {
+  /** Date of the contributing day (YYYY-MM-DD) */
+  date: string;
+  /** English day name, e.g. "Monday" */
+  dayOfWeek: string;
+  /** Total overtime hours that day accumulated */
+  availableOvertime: number;
+  /** Hours from this day assigned to the payoff */
+  allocatedHours: number;
+}
+
 export interface OvertimePayoff {
   id: string;
   date: string;        // YYYY-MM-DD — when the company paid it off
   hours: number;       // positive number of hours deducted
   description: string; // optional label, e.g. "Q1 Settlement"
+  /** FIFO day-by-day breakdown of where these hours came from */
+  allocations?: OvertimePayoffAllocation[];
 }
 
 export interface WorkHoursPeriod {

@@ -1,11 +1,12 @@
 use crate::error::AppResult;
 use crate::models::holiday::{
-    GermanState, HolidayCache, PublicHoliday, SchoolHoliday, VacationDay, VacationDayType, VacationRange,
+    GermanState, HolidayCache, PublicHoliday, SchoolHoliday, VacationDay, VacationDayType,
+    VacationRange,
 };
 use crate::services::holiday_service::HolidayService;
 use chrono::NaiveDate;
-use tauri::{AppHandle, Manager};
 use std::str::FromStr;
+use tauri::{AppHandle, Manager};
 
 /// Helper to get or create holiday service
 fn get_holiday_service(app: &AppHandle) -> AppResult<HolidayService> {
@@ -13,7 +14,7 @@ fn get_holiday_service(app: &AppHandle) -> AppResult<HolidayService> {
         .path()
         .app_data_dir()
         .map_err(|e| crate::error::AppError::Tauri(format!("Failed to get app data dir: {}", e)))?;
-    
+
     HolidayService::new(app_data_dir)
 }
 
@@ -24,7 +25,7 @@ pub async fn get_german_states(_app: AppHandle) -> AppResult<Vec<(String, String
         .into_iter()
         .map(|s| (s.code().to_string(), s.name().to_string()))
         .collect();
-    
+
     Ok(states)
 }
 
@@ -35,9 +36,10 @@ pub async fn fetch_public_holidays(
     state_code: String,
     year: i32,
 ) -> AppResult<Vec<PublicHoliday>> {
-    let state = GermanState::from_code(&state_code)
-        .ok_or_else(|| crate::error::AppError::Config(format!("Invalid state code: {}", state_code)))?;
-    
+    let state = GermanState::from_code(&state_code).ok_or_else(|| {
+        crate::error::AppError::Config(format!("Invalid state code: {}", state_code))
+    })?;
+
     let service = get_holiday_service(&app)?;
     service.fetch_public_holidays(state, year).await
 }
@@ -49,9 +51,10 @@ pub async fn fetch_school_holidays(
     state_code: String,
     year: i32,
 ) -> AppResult<Vec<SchoolHoliday>> {
-    let state = GermanState::from_code(&state_code)
-        .ok_or_else(|| crate::error::AppError::Config(format!("Invalid state code: {}", state_code)))?;
-    
+    let state = GermanState::from_code(&state_code).ok_or_else(|| {
+        crate::error::AppError::Config(format!("Invalid state code: {}", state_code))
+    })?;
+
     let service = get_holiday_service(&app)?;
     service.fetch_school_holidays(state, year).await
 }
@@ -63,9 +66,10 @@ pub async fn fetch_and_cache_holidays(
     state_code: String,
     year: i32,
 ) -> AppResult<HolidayCache> {
-    let state = GermanState::from_code(&state_code)
-        .ok_or_else(|| crate::error::AppError::Config(format!("Invalid state code: {}", state_code)))?;
-    
+    let state = GermanState::from_code(&state_code).ok_or_else(|| {
+        crate::error::AppError::Config(format!("Invalid state code: {}", state_code))
+    })?;
+
     let service = get_holiday_service(&app)?;
     service.fetch_and_cache_holidays(state, year).await
 }
@@ -83,7 +87,7 @@ pub async fn add_vacation_day(
 ) -> AppResult<()> {
     let date = NaiveDate::from_str(&date)
         .map_err(|e| crate::error::AppError::DateParse(format!("Invalid date format: {}", e)))?;
-    
+
     let day_type = match day_type.as_str() {
         "Vacation" => VacationDayType::Vacation,
         "SickDay" => VacationDayType::SickDay,
@@ -91,7 +95,12 @@ pub async fn add_vacation_day(
         "Training" => VacationDayType::Training,
         "BusinessTrip" => VacationDayType::BusinessTrip,
         "Saldo" => VacationDayType::Saldo,
-        _ => return Err(crate::error::AppError::Config(format!("Invalid day type: {}", day_type))),
+        _ => {
+            return Err(crate::error::AppError::Config(format!(
+                "Invalid day type: {}",
+                day_type
+            )))
+        }
     };
 
     let vacation_day = VacationDay {
@@ -114,32 +123,33 @@ pub async fn add_vacation_days_batch(
     vacation_days: Vec<serde_json::Value>,
 ) -> AppResult<()> {
     let service = get_holiday_service(&app)?;
-    
+
     let mut parsed_days = Vec::new();
-    
+
     // Generate a range_id if we're adding multiple days
     let range_id = if vacation_days.len() > 1 {
         Some(uuid::Uuid::new_v4().to_string())
     } else {
         None
     };
-    
+
     for day_json in vacation_days {
         let date_str = day_json["date"]
             .as_str()
             .ok_or_else(|| crate::error::AppError::Config("Missing date field".to_string()))?;
-        
+
         let day_type_str = day_json["dayType"]
             .as_str()
             .ok_or_else(|| crate::error::AppError::Config("Missing dayType field".to_string()))?;
-        
+
         let description = day_json["description"].as_str().map(|s| s.to_string());
         let worked_hours = day_json["workedHours"].as_f64();
         let billable = day_json["billable"].as_bool();
-        
-        let date = NaiveDate::from_str(date_str)
-            .map_err(|e| crate::error::AppError::DateParse(format!("Invalid date format: {}", e)))?;
-        
+
+        let date = NaiveDate::from_str(date_str).map_err(|e| {
+            crate::error::AppError::DateParse(format!("Invalid date format: {}", e))
+        })?;
+
         let day_type = match day_type_str {
             "Vacation" => VacationDayType::Vacation,
             "SickDay" => VacationDayType::SickDay,
@@ -147,9 +157,14 @@ pub async fn add_vacation_days_batch(
             "Training" => VacationDayType::Training,
             "BusinessTrip" => VacationDayType::BusinessTrip,
             "Saldo" => VacationDayType::Saldo,
-            _ => return Err(crate::error::AppError::Config(format!("Invalid day type: {}", day_type_str))),
+            _ => {
+                return Err(crate::error::AppError::Config(format!(
+                    "Invalid day type: {}",
+                    day_type_str
+                )))
+            }
         };
-        
+
         parsed_days.push(VacationDay {
             date,
             day_type,
@@ -159,7 +174,7 @@ pub async fn add_vacation_days_batch(
             range_id: range_id.clone(),
         });
     }
-    
+
     service.add_vacation_days_batch(parsed_days)
 }
 
@@ -177,11 +192,13 @@ pub async fn get_vacation_days_in_range(
     start_date: String,
     end_date: String,
 ) -> AppResult<Vec<VacationDay>> {
-    let start = NaiveDate::from_str(&start_date)
-        .map_err(|e| crate::error::AppError::DateParse(format!("Invalid start_date format: {}", e)))?;
-    
-    let end = NaiveDate::from_str(&end_date)
-        .map_err(|e| crate::error::AppError::DateParse(format!("Invalid end_date format: {}", e)))?;
+    let start = NaiveDate::from_str(&start_date).map_err(|e| {
+        crate::error::AppError::DateParse(format!("Invalid start_date format: {}", e))
+    })?;
+
+    let end = NaiveDate::from_str(&end_date).map_err(|e| {
+        crate::error::AppError::DateParse(format!("Invalid end_date format: {}", e))
+    })?;
 
     let service = get_holiday_service(&app)?;
     service.get_vacation_days_in_range(start, end)
@@ -204,11 +221,13 @@ pub async fn delete_vacation_days_in_range(
     start_date: String,
     end_date: String,
 ) -> AppResult<()> {
-    let start = NaiveDate::from_str(&start_date)
-        .map_err(|e| crate::error::AppError::DateParse(format!("Invalid start_date format: {}", e)))?;
-    
-    let end = NaiveDate::from_str(&end_date)
-        .map_err(|e| crate::error::AppError::DateParse(format!("Invalid end_date format: {}", e)))?;
+    let start = NaiveDate::from_str(&start_date).map_err(|e| {
+        crate::error::AppError::DateParse(format!("Invalid start_date format: {}", e))
+    })?;
+
+    let end = NaiveDate::from_str(&end_date).map_err(|e| {
+        crate::error::AppError::DateParse(format!("Invalid end_date format: {}", e))
+    })?;
 
     let service = get_holiday_service(&app)?;
     service.delete_vacation_days_in_range(start, end)
@@ -230,10 +249,7 @@ pub async fn get_vacation_ranges(app: AppHandle) -> AppResult<Vec<VacationRange>
 
 /// Delete an entire vacation range by range_id
 #[tauri::command]
-pub async fn delete_vacation_range(
-    app: AppHandle,
-    range_id: String,
-) -> AppResult<()> {
+pub async fn delete_vacation_range(app: AppHandle, range_id: String) -> AppResult<()> {
     let service = get_holiday_service(&app)?;
     service.delete_vacation_range(&range_id)
 }
@@ -256,12 +272,23 @@ pub async fn update_vacation_range(
             "Training" => VacationDayType::Training,
             "BusinessTrip" => VacationDayType::BusinessTrip,
             "Saldo" => VacationDayType::Saldo,
-            _ => return Err(crate::error::AppError::Config(format!("Invalid day type: {}", dt))),
+            _ => {
+                return Err(crate::error::AppError::Config(format!(
+                    "Invalid day type: {}",
+                    dt
+                )))
+            }
         })
     } else {
         None
     };
 
     let service = get_holiday_service(&app)?;
-    service.update_vacation_range(&range_id, parsed_day_type, description, worked_hours, billable)
+    service.update_vacation_range(
+        &range_id,
+        parsed_day_type,
+        description,
+        worked_hours,
+        billable,
+    )
 }

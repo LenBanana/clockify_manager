@@ -29,26 +29,22 @@ impl ConfigService {
             return Ok(AppConfig::default());
         }
 
-        let contents = fs::read_to_string(&self.config_path).map_err(|e| {
-            AppError::Config(format!("Failed to read config file: {}", e))
-        })?;
+        let contents = fs::read_to_string(&self.config_path)
+            .map_err(|e| AppError::Config(format!("Failed to read config file: {}", e)))?;
 
-        let config: AppConfig = serde_json::from_str(&contents).map_err(|e| {
-            AppError::Config(format!("Failed to parse config file: {}", e))
-        })?;
+        let config: AppConfig = serde_json::from_str(&contents)
+            .map_err(|e| AppError::Config(format!("Failed to parse config file: {}", e)))?;
 
         Ok(config)
     }
 
     /// Write configuration to file
     pub fn write_config(&self, config: &AppConfig) -> AppResult<()> {
-        let json = serde_json::to_string_pretty(config).map_err(|e| {
-            AppError::Config(format!("Failed to serialize config: {}", e))
-        })?;
+        let json = serde_json::to_string_pretty(config)
+            .map_err(|e| AppError::Config(format!("Failed to serialize config: {}", e)))?;
 
-        fs::write(&self.config_path, json).map_err(|e| {
-            AppError::Config(format!("Failed to write config file: {}", e))
-        })?;
+        fs::write(&self.config_path, json)
+            .map_err(|e| AppError::Config(format!("Failed to write config file: {}", e)))?;
 
         Ok(())
     }

@@ -6,7 +6,7 @@ use crate::models::overtime::{DayBreakdown, OvertimeReport, ProjectBreakdown};
 use crate::services::overtime_service::OvertimeService;
 
 /// Calculate overtime report for a date range
-/// 
+///
 /// # Arguments
 /// * `start_date` - Start date in YYYY-MM-DD format
 /// * `end_date` - End date in YYYY-MM-DD format
@@ -37,7 +37,7 @@ pub fn calculate_overtime(
 }
 
 /// Get project breakdown aggregated over a period
-/// 
+///
 /// # Arguments
 /// * `time_entries` - Clockify time entries for the period
 /// * `projects` - List of projects for name resolution
@@ -46,11 +46,14 @@ pub fn get_project_breakdown(
     time_entries: Vec<TimeEntry>,
     projects: Vec<Project>,
 ) -> AppResult<Vec<ProjectBreakdown>> {
-    Ok(OvertimeService::generate_project_breakdown(&time_entries, &projects))
+    Ok(OvertimeService::generate_project_breakdown(
+        &time_entries,
+        &projects,
+    ))
 }
 
 /// Get daily breakdown for a date range
-/// 
+///
 /// # Arguments
 /// * `start_date` - Start date in YYYY-MM-DD format
 /// * `end_date` - End date in YYYY-MM-DD format
@@ -71,8 +74,9 @@ pub fn get_daily_breakdown(
 ) -> AppResult<Vec<DayBreakdown>> {
     use crate::utils::date_utils::parse_date;
 
-    let start = parse_date(&start_date)
-        .map_err(|e| crate::error::AppError::ValidationError(format!("Invalid start date: {}", e)))?;
+    let start = parse_date(&start_date).map_err(|e| {
+        crate::error::AppError::ValidationError(format!("Invalid start date: {}", e))
+    })?;
     let end = parse_date(&end_date)
         .map_err(|e| crate::error::AppError::ValidationError(format!("Invalid end date: {}", e)))?;
 

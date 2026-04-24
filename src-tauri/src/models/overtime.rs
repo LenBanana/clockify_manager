@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use chrono::NaiveDate;
+use serde::{Deserialize, Serialize};
 
 /// Type of day for overtime calculation purposes
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -138,31 +138,45 @@ impl OvertimeReport {
         self.expected_work_hours = self.daily_breakdown.iter().map(|d| d.expected_hours).sum();
         self.overtime_hours = self.total_worked_hours - self.expected_work_hours;
 
-        self.work_days_count = self.daily_breakdown.iter()
+        self.work_days_count = self
+            .daily_breakdown
+            .iter()
             .filter(|d| d.day_type == DayType::WorkDay)
             .count() as i32;
 
-        self.weekend_days_worked = self.daily_breakdown.iter()
+        self.weekend_days_worked = self
+            .daily_breakdown
+            .iter()
             .filter(|d| d.day_type == DayType::Weekend && d.actual_hours > 0.0)
             .count() as i32;
 
-        self.vacation_days_taken = self.daily_breakdown.iter()
+        self.vacation_days_taken = self
+            .daily_breakdown
+            .iter()
             .filter(|d| d.day_type == DayType::Vacation)
             .count() as i32;
 
-        self.sick_days_taken = self.daily_breakdown.iter()
+        self.sick_days_taken = self
+            .daily_breakdown
+            .iter()
             .filter(|d| d.day_type == DayType::SickDay)
             .count() as i32;
 
-        self.personal_days_taken = self.daily_breakdown.iter()
+        self.personal_days_taken = self
+            .daily_breakdown
+            .iter()
             .filter(|d| d.day_type == DayType::PersonalDay)
             .count() as i32;
 
-        self.training_days_count = self.daily_breakdown.iter()
+        self.training_days_count = self
+            .daily_breakdown
+            .iter()
             .filter(|d| d.day_type == DayType::Training)
             .count() as i32;
 
-        self.public_holidays_count = self.daily_breakdown.iter()
+        self.public_holidays_count = self
+            .daily_breakdown
+            .iter()
             .filter(|d| d.day_type == DayType::PublicHoliday)
             .count() as i32;
     }

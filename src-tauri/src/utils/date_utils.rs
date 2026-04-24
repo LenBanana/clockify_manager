@@ -1,6 +1,6 @@
-use chrono::{Datelike, NaiveDate, Weekday};
 use crate::models::holiday::{PublicHoliday, VacationDay, VacationDayType};
 use crate::models::overtime::DayType;
+use chrono::{Datelike, NaiveDate, Weekday};
 
 /// Get the day of week as a string
 pub fn get_day_of_week_name(date: &NaiveDate) -> String {
@@ -100,12 +100,12 @@ pub fn classify_day(
 pub fn date_range(start: NaiveDate, end: NaiveDate) -> Vec<NaiveDate> {
     let mut dates = Vec::new();
     let mut current = start;
-    
+
     while current <= end {
         dates.push(current);
         current = current.succ_opt().expect("Date overflow");
     }
-    
+
     dates
 }
 

@@ -39,6 +39,20 @@ impl Default for ClockifyConfig {
     }
 }
 
+/// One day's contribution to a payoff (FIFO allocation).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OvertimePayoffAllocation {
+    /// Date of the day (YYYY-MM-DD)
+    pub date: String,
+    /// English day name, e.g. "Monday"
+    pub day_of_week: String,
+    /// Total overtime hours the day accumulated
+    pub available_overtime: f64,
+    /// How many hours from this day are assigned to the payoff
+    pub allocated_hours: f64,
+}
+
 /// A single overtime payoff entry — hours paid off by the employer.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OvertimePayoff {
@@ -50,6 +64,10 @@ pub struct OvertimePayoff {
     /// Optional label, e.g. "Q1 Settlement"
     #[serde(default)]
     pub description: String,
+    /// FIFO day-by-day breakdown of where these hours came from.
+    /// Populated by the frontend when the payoff is created/edited.
+    #[serde(default)]
+    pub allocations: Vec<OvertimePayoffAllocation>,
 }
 
 /// A single contracted-hours period.

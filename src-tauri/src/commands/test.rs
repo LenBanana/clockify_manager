@@ -1,7 +1,10 @@
 /// Simple test command to verify Rust <-> Angular communication
 #[tauri::command]
 pub async fn greet(name: String) -> Result<String, String> {
-    Ok(format!("Hello, {}! Welcome to Clockify Overtime Tracker.", name))
+    Ok(format!(
+        "Hello, {}! Welcome to Clockify Overtime Tracker.",
+        name
+    ))
 }
 
 /// Get system information for debugging

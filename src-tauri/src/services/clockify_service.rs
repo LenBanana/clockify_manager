@@ -1,7 +1,5 @@
 use crate::error::{AppError, AppResult};
-use crate::models::clockify::{
-    Project, TimeEntry, User, Workspace,
-};
+use crate::models::clockify::{Project, TimeEntry, User, Workspace};
 use chrono::{DateTime, Utc};
 use reqwest::{Client, StatusCode};
 use std::time::Duration;
@@ -111,7 +109,7 @@ impl ClockifyService {
     ) -> AppResult<Vec<TimeEntry>> {
         // First, get the current user to get their user ID
         let user = self.fetch_user().await?;
-        
+
         let mut all_entries = Vec::new();
         let mut page = 1;
         let page_size = 50; // Reasonable page size for user time entries
@@ -137,7 +135,7 @@ impl ClockifyService {
                 .map_err(|e| self.handle_request_error(e))?;
 
             let entries: Vec<TimeEntry> = self.handle_response(response).await?;
-            
+
             let entries_count = entries.len();
             all_entries.extend(entries);
 
@@ -167,21 +165,21 @@ impl ClockifyService {
         if error.is_timeout() {
             AppError::ClockifyApi("Request timeout - Clockify API may be slow".to_string())
         } else if error.is_connect() {
-            AppError::ClockifyApi("Cannot connect to Clockify API - check internet connection".to_string())
+            AppError::ClockifyApi(
+                "Cannot connect to Clockify API - check internet connection".to_string(),
+            )
         } else if let Some(status) = error.status() {
             match status {
                 StatusCode::UNAUTHORIZED => {
                     AppError::ClockifyApi("Invalid API key or unauthorized access".to_string())
                 }
-                StatusCode::FORBIDDEN => {
-                    AppError::ClockifyApi("Access forbidden - check workspace permissions".to_string())
-                }
-                StatusCode::NOT_FOUND => {
-                    AppError::ClockifyApi("Resource not found".to_string())
-                }
-                StatusCode::TOO_MANY_REQUESTS => {
-                    AppError::ClockifyApi("Rate limit exceeded - please try again later".to_string())
-                }
+                StatusCode::FORBIDDEN => AppError::ClockifyApi(
+                    "Access forbidden - check workspace permissions".to_string(),
+                ),
+                StatusCode::NOT_FOUND => AppError::ClockifyApi("Resource not found".to_string()),
+                StatusCode::TOO_MANY_REQUESTS => AppError::ClockifyApi(
+                    "Rate limit exceeded - please try again later".to_string(),
+                ),
                 _ => AppError::ClockifyApi(format!("HTTP error: {}", status)),
             }
         } else {
@@ -206,15 +204,13 @@ impl ClockifyService {
                 StatusCode::UNAUTHORIZED => {
                     AppError::ClockifyApi("Invalid API key or unauthorized access".to_string())
                 }
-                StatusCode::FORBIDDEN => {
-                    AppError::ClockifyApi("Access forbidden - check workspace permissions".to_string())
-                }
-                StatusCode::NOT_FOUND => {
-                    AppError::ClockifyApi("Resource not found".to_string())
-                }
-                StatusCode::TOO_MANY_REQUESTS => {
-                    AppError::ClockifyApi("Rate limit exceeded - please try again later".to_string())
-                }
+                StatusCode::FORBIDDEN => AppError::ClockifyApi(
+                    "Access forbidden - check workspace permissions".to_string(),
+                ),
+                StatusCode::NOT_FOUND => AppError::ClockifyApi("Resource not found".to_string()),
+                StatusCode::TOO_MANY_REQUESTS => AppError::ClockifyApi(
+                    "Rate limit exceeded - please try again later".to_string(),
+                ),
                 _ => AppError::ClockifyApi(format!("HTTP {} - {}", status, error_text)),
             });
         }

@@ -2,7 +2,9 @@ use crate::error::{AppError, AppResult};
 use crate::models::clockify::{parse_duration_to_hours, Project, TimeEntry};
 use crate::models::config::WorkSettings;
 use crate::models::holiday::{PublicHoliday, VacationDay};
-use crate::models::overtime::{DayBreakdown, DayType, OvertimeReport, ProjectBreakdown, ProjectTime};
+use crate::models::overtime::{
+    DayBreakdown, DayType, OvertimeReport, ProjectBreakdown, ProjectTime,
+};
 use crate::utils::date_utils::{
     classify_day, date_range, format_date, get_day_of_week_name, get_vacation_day, parse_date,
 };
@@ -117,7 +119,12 @@ impl OvertimeService {
             }
 
             // Parse duration
-            let hours = match entry.time_interval.duration.as_ref().and_then(|d| parse_duration_to_hours(d).ok()) {
+            let hours = match entry
+                .time_interval
+                .duration
+                .as_ref()
+                .and_then(|d| parse_duration_to_hours(d).ok())
+            {
                 Some(h) => h,
                 None => continue,
             };
@@ -178,7 +185,12 @@ impl OvertimeService {
         let mut breakdown = Vec::new();
 
         for date in dates {
-            let day_type = classify_day(&date, &work_settings.working_days, public_holidays, vacation_days);
+            let day_type = classify_day(
+                &date,
+                &work_settings.working_days,
+                public_holidays,
+                vacation_days,
+            );
             let expected_hours = Self::calculate_expected_hours(day_type, work_settings, &date);
 
             // For BusinessTrip days, use the worked_hours field instead of summing time entries
@@ -224,7 +236,12 @@ impl OvertimeService {
             }
 
             // Parse duration
-            let hours = match entry.time_interval.duration.as_ref().and_then(|d| parse_duration_to_hours(d).ok()) {
+            let hours = match entry
+                .time_interval
+                .duration
+                .as_ref()
+                .and_then(|d| parse_duration_to_hours(d).ok())
+            {
                 Some(h) => h,
                 None => continue,
             };
@@ -267,7 +284,8 @@ impl OvertimeService {
         let mut breakdown: Vec<ProjectBreakdown> = project_map.into_values().collect();
         for project in &mut breakdown {
             if total_hours_all_projects > 0.0 {
-                project.percentage_of_total = (project.total_hours / total_hours_all_projects) * 100.0;
+                project.percentage_of_total =
+                    (project.total_hours / total_hours_all_projects) * 100.0;
             }
         }
 
@@ -300,16 +318,18 @@ impl OvertimeService {
         }
 
         // Parse entry date if configured
-        let entry_date = if let Some(ref entry_date_str) = work_settings.entry_date {
-            if !entry_date_str.is_empty() {
-                Some(parse_date(entry_date_str)
-                    .map_err(|e| AppError::ValidationError(format!("Invalid entry date: {}", e)))?)
+        let entry_date =
+            if let Some(ref entry_date_str) = work_settings.entry_date {
+                if !entry_date_str.is_empty() {
+                    Some(parse_date(entry_date_str).map_err(|e| {
+                        AppError::ValidationError(format!("Invalid entry date: {}", e))
+                    })?)
+                } else {
+                    None
+                }
             } else {
                 None
-            }
-        } else {
-            None
-        };
+            };
 
         // Adjust start_date if entry_date is later
         let effective_start_date = if let Some(entry_dt) = entry_date {
@@ -378,8 +398,8 @@ impl OvertimeService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::{DateTime, Utc};
     use crate::models::clockify::TimeInterval;
+    use chrono::{DateTime, Utc};
 
     fn create_test_work_settings() -> WorkSettings {
         WorkSettings {
