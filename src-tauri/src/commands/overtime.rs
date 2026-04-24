@@ -116,6 +116,7 @@ mod tests {
             break_duration_minutes: 30,
             entry_date: None,
             work_hours_schedule: vec![],
+            overtime_payoffs: vec![],
         }
     }
 

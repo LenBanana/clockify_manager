@@ -8,13 +8,17 @@ use crate::models::overtime::{
 use crate::utils::date_utils::{
     classify_day, date_range, format_date, get_day_of_week_name, get_vacation_day, parse_date,
 };
-use chrono::NaiveDate;
+use chrono::{DateTime, Duration, NaiveDate, Utc};
 use std::collections::HashMap;
 
 /// Service for calculating overtime and generating reports
 pub struct OvertimeService;
 
 impl OvertimeService {
+    fn round_two_decimals(value: f64) -> f64 {
+        (value * 100.0).round() / 100.0
+    }
+
     /// Return the contracted daily hours for a specific calendar date.
     ///
     /// Walks `work_settings.work_hours_schedule` (sorted by `start_date` ascending)
@@ -171,6 +175,59 @@ impl OvertimeService {
             .count() as i32
     }
 
+    /// Derive the tracked attendance window for a specific day from Clockify entries.
+    ///
+    /// Break time is calculated as the gap between the earliest start and latest end minus
+    /// the summed worked duration for entries on that day. Negative gaps are clamped to 0
+    /// to tolerate overlapping or inconsistent entries.
+    pub fn get_day_time_window(
+        date: &NaiveDate,
+        time_entries: &[TimeEntry],
+    ) -> (Option<String>, Option<String>, f64) {
+        let mut earliest_start: Option<DateTime<Utc>> = None;
+        let mut latest_end: Option<DateTime<Utc>> = None;
+        let mut worked_duration = Duration::zero();
+
+        for entry in time_entries {
+            let Some(end) = entry.time_interval.end else {
+                continue;
+            };
+
+            if entry.time_interval.start.date_naive() != *date {
+                continue;
+            }
+
+            if end < entry.time_interval.start {
+                continue;
+            }
+
+            earliest_start = Some(match earliest_start {
+                Some(current) => current.min(entry.time_interval.start),
+                None => entry.time_interval.start,
+            });
+            latest_end = Some(match latest_end {
+                Some(current) => current.max(end),
+                None => end,
+            });
+            worked_duration += end.signed_duration_since(entry.time_interval.start);
+        }
+
+        let start_time = earliest_start.map(|start| start.format("%H:%M").to_string());
+        let end_time = latest_end.map(|end| end.format("%H:%M").to_string());
+
+        let break_hours = match (earliest_start, latest_end) {
+            (Some(start), Some(end)) => {
+                let span = end.signed_duration_since(start);
+                let pause_duration = span - worked_duration;
+                let pause_minutes = pause_duration.num_minutes().max(0);
+                Self::round_two_decimals(pause_minutes as f64 / 60.0)
+            }
+            _ => 0.0,
+        };
+
+        (start_time, end_time, break_hours)
+    }
+
     /// Generate daily breakdown for a date range
     pub fn generate_daily_breakdown(
         start_date: NaiveDate,
@@ -192,6 +249,7 @@ impl OvertimeService {
                 vacation_days,
             );
             let expected_hours = Self::calculate_expected_hours(day_type, work_settings, &date);
+            let (start_time, end_time, break_hours) = Self::get_day_time_window(&date, time_entries);
 
             // For BusinessTrip days, use the worked_hours field instead of summing time entries
             let actual_hours = if day_type == DayType::BusinessTrip {
@@ -209,6 +267,9 @@ impl OvertimeService {
             breakdown.push(DayBreakdown {
                 date: format_date(&date),
                 day_of_week: get_day_of_week_name(&date),
+                start_time,
+                end_time,
+                break_hours,
                 day_type,
                 expected_hours,
                 actual_hours,
@@ -415,6 +476,7 @@ mod tests {
             break_duration_minutes: 30,
             entry_date: None,
             work_hours_schedule: vec![],
+            overtime_payoffs: vec![],
         }
     }
 
@@ -546,6 +608,67 @@ mod tests {
 
         let total = OvertimeService::sum_time_entries_for_day(&date, &entries);
         assert_eq!(total, 8.0); // Only completed entry
+    }
+
+    #[test]
+    fn test_get_day_time_window_calculates_breaks_from_entry_gaps() {
+        let date = NaiveDate::from_ymd_opt(2025, 10, 8).unwrap();
+        let first_start: DateTime<Utc> = "2025-10-08T08:00:00Z".parse().unwrap();
+        let first_end: DateTime<Utc> = "2025-10-08T12:00:00Z".parse().unwrap();
+        let second_start: DateTime<Utc> = "2025-10-08T13:00:00Z".parse().unwrap();
+        let second_end: DateTime<Utc> = "2025-10-08T17:00:00Z".parse().unwrap();
+
+        let entries = vec![
+            TimeEntry {
+                id: "entry-1".to_string(),
+                description: Some("Morning".to_string()),
+                user_id: "user-1".to_string(),
+                workspace_id: "workspace-1".to_string(),
+                project_id: Some("project-1".to_string()),
+                task_id: None,
+                time_interval: TimeInterval {
+                    start: first_start,
+                    end: Some(first_end),
+                    duration: Some("PT4H".to_string()),
+                },
+                billable: true,
+                tag_ids: None,
+                custom_field_values: None,
+                r#type: Some("REGULAR".to_string()),
+                kiosk_id: None,
+                hourly_rate: None,
+                cost_rate: None,
+                is_locked: None,
+            },
+            TimeEntry {
+                id: "entry-2".to_string(),
+                description: Some("Afternoon".to_string()),
+                user_id: "user-1".to_string(),
+                workspace_id: "workspace-1".to_string(),
+                project_id: Some("project-1".to_string()),
+                task_id: None,
+                time_interval: TimeInterval {
+                    start: second_start,
+                    end: Some(second_end),
+                    duration: Some("PT4H".to_string()),
+                },
+                billable: true,
+                tag_ids: None,
+                custom_field_values: None,
+                r#type: Some("REGULAR".to_string()),
+                kiosk_id: None,
+                hourly_rate: None,
+                cost_rate: None,
+                is_locked: None,
+            },
+        ];
+
+        let (start_time, end_time, break_hours) =
+            OvertimeService::get_day_time_window(&date, &entries);
+
+        assert_eq!(start_time.as_deref(), Some("08:00"));
+        assert_eq!(end_time.as_deref(), Some("17:00"));
+        assert_eq!(break_hours, 1.0);
     }
 
     #[test]

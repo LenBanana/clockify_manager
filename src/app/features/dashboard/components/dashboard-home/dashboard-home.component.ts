@@ -12,7 +12,7 @@ import { ConfigService } from '../../../../core/services/config.service';
 import { ClockifyService } from '../../../../core/services/clockify.service';
 import { HolidayService } from '../../../../core/services/holiday.service';
 import { OvertimeService } from '../../../../core/services/overtime.service';
-import { OvertimeReport } from '../../../../core/models/overtime.model';
+import { DayBreakdown, OvertimeReport, ProjectBreakdown } from '../../../../core/models/overtime.model';
 import { OvertimePayoff } from '../../../../core/models/config.model';
 import { firstValueFrom } from 'rxjs';
 
@@ -76,6 +76,8 @@ import { firstValueFrom } from 'rxjs';
           <app-daily-breakdown-table
             [dailyBreakdown]="dailyBreakdown"
             [loading]="loading"
+            [startDate]="selectedStartDate"
+            [endDate]="selectedEndDate"
           ></app-daily-breakdown-table>
         </div>
 
@@ -146,8 +148,8 @@ export class DashboardHomeComponent implements OnInit {
   error: string | null = null;
   
   currentMonthReport: OvertimeReport | null = null;
-  dailyBreakdown: any[] = [];
-  projectBreakdown: any[] = [];
+  dailyBreakdown: DayBreakdown[] = [];
+  projectBreakdown: ProjectBreakdown[] = [];
   payoffs: OvertimePayoff[] = [];
 
   selectedStartDate = '';

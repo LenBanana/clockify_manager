@@ -36,6 +36,12 @@ export interface DayBreakdown {
   date: string;
   /** Day of week (Monday, Tuesday, etc.) */
   dayOfWeek: string;
+  /** First tracked start time for the day in HH:MM format */
+  startTime?: string | null;
+  /** Last tracked end time for the day in HH:MM format */
+  endTime?: string | null;
+  /** Total pause between tracked entries in decimal hours */
+  breakHours: number;
   /** Type of day (work, weekend, holiday, etc.) */
   dayType: DayType;
   /** Expected work hours for this day */

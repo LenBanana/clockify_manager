@@ -61,15 +61,6 @@ export interface OvertimePayoffsDialogData {
               </div>
               <div class="payoff-right">
                 <span class="payoff-hours">-{{ payoff.hours.toFixed(1) }}h</span>
-                <button
-                  mat-icon-button
-                  class="action-btn export-btn"
-                  [matTooltip]="payoff.allocations?.length ? 'Aufstellung als Excel exportieren' : 'Keine Aufstellung verfügbar - Eintrag bearbeiten um Daten zu generieren'"
-                  (click)="exportPayoff(payoff)"
-                  [disabled]="!payoff.allocations?.length || exporting"
-                >
-                  <mat-icon>download</mat-icon>
-                </button>
                 <button mat-icon-button class="action-btn" matTooltip="Bearbeiten" (click)="startEdit(payoff)">
                   <mat-icon>edit</mat-icon>
                 </button>
@@ -77,19 +68,6 @@ export interface OvertimePayoffsDialogData {
                   <mat-icon>delete_outline</mat-icon>
                 </button>
               </div>
-            </div>
-
-            <!-- Post-add export offer banner -->
-            <div class="export-offer" *ngIf="lastAddedPayoffId === payoff.id">
-              <mat-icon class="offer-icon">table_view</mat-icon>
-              <span class="offer-text">Aufstellung bereit &mdash; jetzt exportieren?</span>
-              <button mat-stroked-button color="primary" class="offer-btn" (click)="exportPayoff(payoff)" [disabled]="exporting">
-                <mat-icon>download</mat-icon>
-                Excel
-              </button>
-              <button mat-icon-button class="offer-close" matTooltip="SchlieÃŸen" (click)="lastAddedPayoffId = null">
-                <mat-icon>close</mat-icon>
-              </button>
             </div>
           </ng-container>
 
@@ -197,13 +175,6 @@ export interface OvertimePayoffsDialogData {
         <mat-icon>add</mat-icon>
         Auszahlung hinzufügen
       </button>
-
-      <!-- Export error -->
-      <div class="export-error" *ngIf="exportError">
-        <mat-icon>error_outline</mat-icon>
-        <span>Export fehlgeschlagen: {{ exportError }}</span>
-        <button mat-icon-button (click)="exportError = null"><mat-icon>close</mat-icon></button>
-      </div>
     </mat-dialog-content>
 
     <mat-divider></mat-divider>
@@ -316,44 +287,7 @@ export interface OvertimePayoffsDialogData {
       mat-icon { font-size: 18px; width: 18px; height: 18px; }
     }
 
-    .export-btn:not([disabled]) {
-      color: #1565c0;
-      &:hover { color: #0d47a1; }
-    }
-
     .delete-btn:hover { color: #c62828; }
-
-    /* Post-add export offer */
-    .export-offer {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      margin-top: 2px;
-      border-radius: 8px;
-      background: #e3f2fd;
-      border-left: 3px solid #1565c0;
-      font-size: 13px;
-      color: #0d47a1;
-
-      .offer-icon { font-size: 18px; width: 18px; height: 18px; color: #1565c0; flex-shrink: 0; }
-      .offer-text { flex: 1; }
-      .offer-btn {
-        font-size: 12px;
-        height: 30px;
-        line-height: 30px;
-        padding: 0 10px;
-        border-color: #1565c0;
-        color: #1565c0;
-        mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 4px; }
-      }
-      .offer-close {
-        width: 28px;
-        height: 28px;
-        color: #1565c0;
-        mat-icon { font-size: 16px; width: 16px; height: 16px; }
-      }
-    }
 
     /* Allocation preview */
     .allocation-preview { margin: 6px 0 2px; font-size: 12px; }
@@ -427,22 +361,6 @@ export interface OvertimePayoffsDialogData {
       border-color: var(--outline-variant, #cac4d0);
     }
 
-    /* Export error */
-    .export-error {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 12px;
-      padding: 8px 12px;
-      background: #ffebee;
-      border-radius: 6px;
-      font-size: 13px;
-      color: #b71c1c;
-
-      mat-icon { font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; }
-      span { flex: 1; }
-    }
-
     /* Dialog footer */
     .dialog-actions { display: flex; align-items: center; padding: 12px 24px; }
 
@@ -464,9 +382,6 @@ export class OvertimePayoffsDialogComponent implements OnInit {
   payoffs: OvertimePayoff[] = [];
   isAdding = false;
   editingId: string | null = null;
-  lastAddedPayoffId: string | null = null;
-  exporting = false;
-  exportError: string | null = null;
 
   /** Live allocation preview shown beneath the add/edit form */
   preview: AllocationResult | null = null;
@@ -499,8 +414,6 @@ export class OvertimePayoffsDialogComponent implements OnInit {
 
   startAdd(): void {
     this.editingId = null;
-    this.lastAddedPayoffId = null;
-    this.exportError = null;
     this.resetForm();
     this.form.date = new Date().toISOString().slice(0, 10);
     this.isAdding = true;
@@ -528,7 +441,6 @@ export class OvertimePayoffsDialogComponent implements OnInit {
       allocations: allocationResult.allocations,
     };
     this.payoffs = [...this.payoffs, newPayoff].sort((a, b) => a.date.localeCompare(b.date));
-    this.lastAddedPayoffId = newPayoff.id;
     this.isAdding = false;
     this.preview = null;
     this.resetForm();
@@ -538,8 +450,6 @@ export class OvertimePayoffsDialogComponent implements OnInit {
 
   startEdit(payoff: OvertimePayoff): void {
     this.isAdding = false;
-    this.lastAddedPayoffId = null;
-    this.exportError = null;
     this.editingId = payoff.id;
     this.form = { date: payoff.date, hours: payoff.hours, description: payoff.description };
     this.updatePreview();
@@ -579,7 +489,6 @@ export class OvertimePayoffsDialogComponent implements OnInit {
 
   deletePayoff(id: string): void {
     this.payoffs = this.payoffs.filter(p => p.id !== id);
-    if (this.lastAddedPayoffId === id) this.lastAddedPayoffId = null;
   }
 
   //  Allocation preview 
@@ -596,22 +505,6 @@ export class OvertimePayoffsDialogComponent implements OnInit {
       this.payoffs,
       excludeId,
     );
-  }
-
-  //  Excel export 
-
-  async exportPayoff(payoff: OvertimePayoff): Promise<void> {
-    if (!payoff.allocations?.length) return;
-    this.exporting = true;
-    this.exportError = null;
-    try {
-      await this.exportService.exportAufstellung(payoff);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      this.exportError = msg;
-    } finally {
-      this.exporting = false;
-    }
   }
 
   //  Helpers 

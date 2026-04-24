@@ -9,6 +9,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { DayBreakdown, getDayTypeName } from '../../../../core/models/overtime.model';
+import { OvertimeExportService } from '../../../../core/services/overtime-export.service';
 
 /**
  * Daily breakdown table showing day-by-day overtime calculations
@@ -29,13 +30,37 @@ import { DayBreakdown, getDayTypeName } from '../../../../core/models/overtime.m
   ],
   template: `
     <mat-card class="breakdown-card">
-      <mat-card-header>
-        <mat-icon mat-card-avatar>view_list</mat-icon>
-        <mat-card-title>Daily Breakdown</mat-card-title>
-        <mat-card-subtitle>Day-by-day work hours and overtime</mat-card-subtitle>
-      </mat-card-header>
+      <div class="breakdown-header">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>view_list</mat-icon>
+          <mat-card-title>Daily Breakdown</mat-card-title>
+          <mat-card-subtitle>Day-by-day work hours and overtime</mat-card-subtitle>
+        </mat-card-header>
+
+        <div class="header-actions">
+          <button
+            mat-stroked-button
+            color="primary"
+            class="export-button"
+            matTooltip="Aktuelle Tabelle als Excel exportieren"
+            (click)="exportCurrentTable()"
+            [disabled]="!canExport || exporting"
+          >
+            <mat-icon>{{ exporting ? 'hourglass_top' : 'download' }}</mat-icon>
+            {{ exporting ? 'Export läuft' : 'Excel exportieren' }}
+          </button>
+        </div>
+      </div>
 
       <mat-card-content>
+        <div class="export-error" *ngIf="exportError">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ exportError }}</span>
+          <button mat-icon-button type="button" aria-label="Exportfehler schließen" (click)="exportError = null">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
         <div *ngIf="dailyBreakdown && dailyBreakdown.length > 0" class="table-container">
           <table mat-table [dataSource]="dataSource" matSort class="daily-table">
             
@@ -169,6 +194,15 @@ import { DayBreakdown, getDayTypeName } from '../../../../core/models/overtime.m
       width: 100%;
     }
 
+    .breakdown-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      padding-right: 16px;
+      flex-wrap: wrap;
+    }
+
     mat-card-header {
       margin-bottom: 16px;
     }
@@ -178,6 +212,41 @@ import { DayBreakdown, getDayTypeName } from '../../../../core/models/overtime.m
       font-size: 28px;
       width: 28px;
       height: 28px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      margin: 16px 0 0 auto;
+    }
+
+    .export-button {
+      min-width: 180px;
+    }
+
+    .export-button mat-icon {
+      margin-right: 8px;
+    }
+
+    .export-error {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: #ffebee;
+      color: #b71c1c;
+    }
+
+    .export-error span {
+      flex: 1;
+    }
+
+    .export-error mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
     }
 
     .table-container {
@@ -427,19 +496,44 @@ import { DayBreakdown, getDayTypeName } from '../../../../core/models/overtime.m
       margin-bottom: 16px;
       opacity: 0.5;
     }
+
+    @media (max-width: 768px) {
+      .breakdown-header {
+        padding-right: 0;
+      }
+
+      .header-actions {
+        width: 100%;
+        margin-top: 0;
+      }
+
+      .export-button {
+        width: 100%;
+      }
+    }
   `],
 })
 export class DailyBreakdownTableComponent implements AfterViewInit, OnChanges {
   @Input() dailyBreakdown: DayBreakdown[] | null = null;
   @Input() loading = false;
+  @Input() startDate = '';
+  @Input() endDate = '';
 
   @ViewChild(MatSort) sort!: MatSort;
   @ViewChild(MatPaginator) paginator!: MatPaginator;
 
   dataSource = new MatTableDataSource<DayBreakdown>([]);
   displayedColumns: string[] = ['date', 'dayType', 'expectedHours', 'actualHours', 'overtimeHours', 'projects', 'entriesCount'];
+  exporting = false;
+  exportError: string | null = null;
 
   getDayTypeName = getDayTypeName;
+
+  constructor(private overtimeExportService: OvertimeExportService) {}
+
+  get canExport(): boolean {
+    return !this.loading && this.getExportRows().length > 0;
+  }
 
   ngAfterViewInit(): void {
     this.dataSource.sort = this.sort;
@@ -449,6 +543,28 @@ export class DailyBreakdownTableComponent implements AfterViewInit, OnChanges {
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['dailyBreakdown'] && this.dailyBreakdown) {
       this.dataSource.data = this.dailyBreakdown;
+      this.exportError = null;
+    }
+  }
+
+  async exportCurrentTable(): Promise<void> {
+    const rows = this.getExportRows();
+    if (!rows.length) {
+      return;
+    }
+
+    this.exporting = true;
+    this.exportError = null;
+
+    try {
+      await this.overtimeExportService.exportCurrentTable(rows, {
+        startDate: this.startDate,
+        endDate: this.endDate,
+      });
+    } catch (err: unknown) {
+      this.exportError = err instanceof Error ? err.message : 'Export konnte nicht erstellt werden.';
+    } finally {
+      this.exporting = false;
     }
   }
 
@@ -519,5 +635,17 @@ export class DailyBreakdownTableComponent implements AfterViewInit, OnChanges {
   isPartiallyBillable(day: any): boolean {
     const billableHours = this.getBillableHours(day);
     return billableHours > 0 && !this.isFullyBillable(day);
+  }
+
+  private getExportRows(): DayBreakdown[] {
+    const rows = this.dataSource.filteredData.length > 0
+      ? [...this.dataSource.filteredData]
+      : [...this.dataSource.data];
+
+    if (this.sort?.active) {
+      return this.dataSource.sortData(rows, this.sort);
+    }
+
+    return rows;
   }
 }

@@ -11,6 +11,12 @@ export interface AllocationResult {
   unallocated: number;
 }
 
+export interface OvertimeTableExportOptions {
+  startDate?: string;
+  endDate?: string;
+  employeeName?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class OvertimeExportService {
 
@@ -69,14 +75,21 @@ export class OvertimeExportService {
   }
 
   /**
-   * Generates and saves an "Aufstellung der Überstunden" as an .xlsx file.
-   *
-   * Uses Tauri's native save dialog so the user can choose the target location.
-   *
-   * @param payoff  - the payoff entry (must have `allocations` populated)
-   * @param employeeName - optional: shown in the info header block
+   * Generates and saves the current overtime table as an .xlsx file.
    */
-  async exportAufstellung(payoff: OvertimePayoff, employeeName?: string): Promise<void> {
+  async exportCurrentTable(
+    dailyBreakdown: DayBreakdown[],
+    options: OvertimeTableExportOptions = {},
+  ): Promise<void> {
+    if (!dailyBreakdown.length) {
+      throw new Error('Keine Überstunden-Tabelle zum Exportieren verfügbar.');
+    }
+
+    const exportDays = dailyBreakdown.filter((day) => this.shouldIncludeExportRow(day));
+    if (!exportDays.length) {
+      throw new Error('Für den gewählten Zeitraum gibt es keine exportierbaren Zeilen.');
+    }
+
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Clockify Manager';
     workbook.created = new Date();
@@ -84,34 +97,75 @@ export class OvertimeExportService {
 
     const sheet = workbook.addWorksheet('Aufstellung Überstunden', {
       pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true },
+      views: [{ state: 'frozen', ySplit: 1 }],
     });
 
-    // ── Column definitions ──────────────────────────────────────────────────
     sheet.columns = [
-      { key: 'a', width: 20 },  // A: Datum
-      { key: 'b', width: 13 },  // B: Wochentag
-      { key: 'c', width: 22 },  // C: Überstunden gesamt
-      { key: 'd', width: 22 },  // D: Angerechnete Stunden
-      { key: 'e', width: 14 },  // E: Hinweis
+      { key: 'date', width: 18 },
+      { key: 'day', width: 15 },
+      { key: 'start', width: 11 },
+      { key: 'end', width: 11 },
+      { key: 'break', width: 11 },
+      { key: 'hours', width: 13 },
+      { key: 'overtime', width: 14 },
+      { key: 'deficit', width: 14 },
     ];
 
-    // ── Colour palette ──────────────────────────────────────────────────────
-    const TITLE_BG    = { argb: 'FF1565C0' }; // deep blue
-    const TITLE_FG    = { argb: 'FFFFFFFF' }; // white
-    const HEADER_BG   = { argb: 'FFE3F2FD' }; // light blue for table header
-    const HEADER_FG   = { argb: 'FF0D47A1' }; // dark blue text
-    const ALT_ROW_BG  = { argb: 'FFF5F5F5' }; // light grey alternating
-    const PARTIAL_BG  = { argb: 'FFFFF9C4' }; // light yellow – partial alloc
-    const TOTAL_BG    = { argb: 'FFE8F5E9' }; // light green – total row
-    const TOTAL_FG    = { argb: 'FF1B5E20' }; // dark green text
+    const TITLE_BG = { argb: 'FF1565C0' };
+    const TITLE_FG = { argb: 'FFFFFFFF' };
+    const HEADER_BG = { argb: 'FFE3F2FD' };
+    const HEADER_FG = { argb: 'FF0D47A1' };
+    const ALT_ROW_BG = { argb: 'FFF5F5F5' };
+    const TOTAL_BG = { argb: 'FFE8F5E9' };
+    const TOTAL_FG = { argb: 'FF1B5E20' };
+    const POSITIVE_BG = { argb: 'FFE8F5E9' };
+    const NEGATIVE_BG = { argb: 'FFFFEBEE' };
+    const VACATION_BG = { argb: 'FFE8F5E9' };
+    const SICK_BG = { argb: 'FFFFEBEE' };
+    const PERSONAL_BG = { argb: 'FFFFF3E0' };
+    const TRAINING_BG = { argb: 'FFF3E5F5' };
+    const BUSINESS_BG = { argb: 'FFE0F7FA' };
+    const SALDO_BG = { argb: 'FFFFF3E0' };
+    const WEEKEND_BG = { argb: 'FFF5F5F5' };
+    const HOLIDAY_BG = { argb: 'FFE3F2FD' };
     const BORDER_BLUE: Partial<ExcelJS.Border> = { style: 'medium', color: { argb: 'FF1565C0' } };
     const BORDER_GREEN: Partial<ExcelJS.Border> = { style: 'medium', color: { argb: 'FF2E7D32' } };
     const BORDER_THIN: Partial<ExcelJS.Border> = { style: 'thin', color: { argb: 'FFBDBDBD' } };
 
-    const allocations = payoff.allocations ?? [];
+    const resolvedStartDate = options.startDate ?? dailyBreakdown[0]?.date;
+    const resolvedEndDate = options.endDate ?? dailyBreakdown[dailyBreakdown.length - 1]?.date;
+    const exportedAt = new Date();
+    const rows = exportDays.map((day) => ({
+      date: this.formatDateDE(day.date),
+      day: this.buildDayLabel(day),
+      start: day.startTime ?? '',
+      end: day.endTime ?? '',
+      break: day.startTime && day.endTime ? this.formatDurationHHMM(day.breakHours ?? 0) : '',
+      hours: day.actualHours,
+      overtime: day.overtimeHours > 0.001 ? day.overtimeHours : null,
+      deficit: day.overtimeHours < -0.001 ? Math.abs(day.overtimeHours) : null,
+      rawExpected: day.expectedHours,
+      rawOvertime: day.overtimeHours,
+      rawHours: day.actualHours,
+      dayType: day.dayType,
+    }));
+    const totalExpected = rows.reduce((sum, row) => sum + row.rawExpected, 0);
+    const totalWorked = rows.reduce((sum, row) => sum + row.rawHours, 0);
+    const totalOvertime = rows.reduce((sum, row) => sum + Math.max(row.rawOvertime, 0), 0);
+    const totalDeficit = rows.reduce((sum, row) => sum + Math.max(-row.rawOvertime, 0), 0);
+    const netOvertime = totalOvertime - totalDeficit;
+    const DAY_TYPE_FILL: Partial<Record<DayBreakdown['dayType'], { argb: string }>> = {
+      Weekend: WEEKEND_BG,
+      PublicHoliday: HOLIDAY_BG,
+      Vacation: VACATION_BG,
+      SickDay: SICK_BG,
+      PersonalDay: PERSONAL_BG,
+      Training: TRAINING_BG,
+      BusinessTrip: BUSINESS_BG,
+      Saldo: SALDO_BG,
+    };
 
-    // ── Row 1: Title ────────────────────────────────────────────────────────
-    sheet.mergeCells('A1:E1');
+    sheet.mergeCells('A1:H1');
     const titleCell = sheet.getCell('A1');
     titleCell.value = 'AUFSTELLUNG DER ÜBERSTUNDEN';
     titleCell.font = { bold: true, size: 14, color: TITLE_FG, name: 'Calibri' };
@@ -120,22 +174,27 @@ export class OvertimeExportService {
     titleCell.border = { bottom: BORDER_BLUE };
     sheet.getRow(1).height = 30;
 
-    // ── Rows 2-N: Info block ─────────────────────────────────────────────────
     let infoRow = 2;
 
-    this.addInfoRow(sheet, infoRow++, 'Auszahlungsdatum', this.formatDateDE(payoff.date));
-    this.addInfoRow(sheet, infoRow++, 'Beschreibung', payoff.description || '—');
-    if (employeeName) {
-      this.addInfoRow(sheet, infoRow++, 'Mitarbeiter', employeeName);
+    if (resolvedStartDate && resolvedEndDate) {
+      const periodLabel = resolvedStartDate === resolvedEndDate
+        ? this.formatDateDE(resolvedStartDate)
+        : `${this.formatDateDE(resolvedStartDate)} bis ${this.formatDateDE(resolvedEndDate)}`;
+      this.addInfoRow(sheet, infoRow++, 'Zeitraum', periodLabel, 8);
     }
-    this.addInfoRow(sheet, infoRow++, 'Gesamtstunden', this.formatHoursDE(payoff.hours));
+    this.addInfoRow(sheet, infoRow++, 'Exportiert am', exportedAt.toLocaleString('de-DE'), 8);
+    if (options.employeeName) {
+      this.addInfoRow(sheet, infoRow++, 'Mitarbeiter', options.employeeName, 8);
+    }
+    this.addInfoRow(sheet, infoRow++, 'Soll Stunden', this.formatHoursDE(totalExpected), 8);
+    this.addInfoRow(sheet, infoRow++, 'Ist Stunden', this.formatHoursDE(totalWorked), 8);
+    const overtimeInfoRowNum = infoRow;
+    this.addInfoRow(sheet, infoRow++, 'Saldo Überstunden', this.formatSignedHoursDE(netOvertime), 8);
 
-    // ── Blank separator row ──────────────────────────────────────────────────
     infoRow++;
 
-    // ── Table header row ─────────────────────────────────────────────────────
     const headerRowNum = infoRow++;
-    const headers = ['Datum', 'Wochentag', 'Überstunden gesamt', 'Angerechnete Stunden', 'Hinweis'];
+    const headers = ['Datum', 'Tag', 'Beginn', 'Ende', 'Pause', 'Stunden', 'Überstunden', 'Minusstunden'];
     const headerRow = sheet.getRow(headerRowNum);
     headers.forEach((h, idx) => {
       const cell = headerRow.getCell(idx + 1);
@@ -151,28 +210,40 @@ export class OvertimeExportService {
       };
     });
     headerRow.height = 22;
+    sheet.autoFilter = {
+      from: { row: headerRowNum, column: 1 },
+      to: { row: headerRowNum, column: headers.length },
+    };
 
-    // ── Data rows ─────────────────────────────────────────────────────────────
-    let totalAllocated = 0;
+    const dataStartRowNum = headerRowNum + 1;
+    const dataEndRowNum = headerRowNum + rows.length;
+    const hoursNumberFormat = '#,##0.00" h"';
 
-    for (let i = 0; i < allocations.length; i++) {
-      const alloc = allocations[i];
-      const isPartial = alloc.allocatedHours < alloc.availableOvertime - 0.001;
+    for (let i = 0; i < rows.length; i++) {
+      const exportRow = rows[i];
       const rowNum = headerRowNum + 1 + i;
       const row = sheet.getRow(rowNum);
+      const typeFill = DAY_TYPE_FILL[exportRow.dayType];
 
       const values = [
-        this.formatDateDE(alloc.date),
-        this.translateWeekday(alloc.dayOfWeek),
-        `+${this.formatHoursDE(alloc.availableOvertime)}`,
-        this.formatHoursDE(alloc.allocatedHours),
-        isPartial ? 'teilweise' : 'vollständig',
+        exportRow.date,
+        exportRow.day,
+        exportRow.start,
+        exportRow.end,
+        exportRow.break,
+        exportRow.hours,
+        exportRow.overtime,
+        exportRow.deficit,
       ];
 
       values.forEach((v, idx) => {
         const cell = row.getCell(idx + 1);
         cell.value = v;
-        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.alignment = {
+          horizontal: 'center',
+          vertical: 'middle',
+          wrapText: idx === 1,
+        };
         cell.font = { name: 'Calibri', size: 11 };
         cell.border = {
           left: BORDER_THIN,
@@ -181,28 +252,51 @@ export class OvertimeExportService {
           bottom: BORDER_THIN,
         };
 
-        // Highlight: partial allocation in yellow, alternate row in light grey
-        if (isPartial) {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: PARTIAL_BG };
-        } else if (i % 2 === 1) {
+        if (idx >= 5) {
+          cell.numFmt = hoursNumberFormat;
+        }
+
+        if (typeFill) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: typeFill };
+        }
+
+        if (idx === 6 && exportRow.rawOvertime > 0.001) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: POSITIVE_BG };
+        } else if (idx === 7 && exportRow.rawOvertime < -0.001) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: NEGATIVE_BG };
+        } else if (!typeFill && i % 2 === 1) {
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: ALT_ROW_BG };
+        }
+
+        if (idx === 1 && exportRow.day.includes('\n')) {
+          cell.font = { name: 'Calibri', size: 11, bold: true };
         }
       });
 
-      row.height = 18;
-      totalAllocated += alloc.allocatedHours;
+      row.height = exportRow.day.includes('\n') ? 30 : 18;
     }
 
-    // ── Total row ─────────────────────────────────────────────────────────────
-    const totalRowNum = headerRowNum + 1 + allocations.length;
+    const totalRowNum = headerRowNum + 1 + rows.length;
     const totalRow = sheet.getRow(totalRowNum);
-    const totalValues = ['', 'Gesamt', '', this.formatHoursDE(totalAllocated), ''];
+    const totalValues = [
+      '',
+      'Gesamt',
+      '',
+      '',
+      '',
+      { formula: `SUBTOTAL(109,F${dataStartRowNum}:F${dataEndRowNum})`, result: totalWorked },
+      { formula: `SUBTOTAL(109,G${dataStartRowNum}:G${dataEndRowNum})`, result: totalOvertime },
+      { formula: `SUBTOTAL(109,H${dataStartRowNum}:H${dataEndRowNum})`, result: totalDeficit },
+    ];
     totalValues.forEach((v, idx) => {
       const cell = totalRow.getCell(idx + 1);
       cell.value = v || null;
       cell.font = { bold: true, color: TOTAL_FG, name: 'Calibri' };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: TOTAL_BG };
       cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      if (idx >= 5) {
+        cell.numFmt = hoursNumberFormat;
+      }
       cell.border = {
         top: BORDER_GREEN,
         bottom: BORDER_GREEN,
@@ -212,7 +306,19 @@ export class OvertimeExportService {
     });
     totalRow.height = 20;
 
-    const defaultFileName = `Aufstellung_Ueberstunden_${payoff.date}.xlsx`;
+    const overtimeValueCell = sheet.getCell(overtimeInfoRowNum, 2);
+    overtimeValueCell.value = {
+      formula: `G${totalRowNum}-H${totalRowNum}`,
+      result: netOvertime,
+    };
+    overtimeValueCell.numFmt = '+#,##0.00" h";-#,##0.00" h";0.00" h"';
+    overtimeValueCell.font = {
+      name: 'Calibri',
+      bold: true,
+      color: netOvertime < -0.001 ? { argb: 'FFC62828' } : { argb: 'FF2E7D32' },
+    };
+
+    const defaultFileName = this.buildDefaultFileName(resolvedStartDate, resolvedEndDate);
     const targetPath = await save({
       defaultPath: defaultFileName,
       filters: [
@@ -234,15 +340,13 @@ export class OvertimeExportService {
     await writeFile(targetPath, bytes);
   }
 
-  // ── Private helpers ───────────────────────────────────────────────────────
-
-  private addInfoRow(sheet: ExcelJS.Worksheet, rowNum: number, label: string, value: string): void {
+  private addInfoRow(sheet: ExcelJS.Worksheet, rowNum: number, label: string, value: string, lastColumn = 5): void {
     const labelCell = sheet.getCell(rowNum, 1);
     labelCell.value = label + ':';
     labelCell.font = { bold: true, color: { argb: 'FF1565C0' }, name: 'Calibri' };
     labelCell.alignment = { horizontal: 'left', vertical: 'middle' };
 
-    sheet.mergeCells(rowNum, 2, rowNum, 5);
+    sheet.mergeCells(rowNum, 2, rowNum, lastColumn);
     const valueCell = sheet.getCell(rowNum, 2);
     valueCell.value = value;
     valueCell.font = { name: 'Calibri' };
@@ -258,8 +362,30 @@ export class OvertimeExportService {
   }
 
   private formatHoursDE(hours: number): string {
-    // Use comma as decimal separator for German formatting
     return hours.toFixed(2).replace('.', ',') + ' h';
+  }
+
+  private formatSignedHoursDE(hours: number): string {
+    const sign = hours > 0.001 ? '+' : hours < -0.001 ? '-' : '';
+    return `${sign}${Math.abs(hours).toFixed(2).replace('.', ',')} h`;
+  }
+
+  private formatDurationHHMM(hours: number): string {
+    const totalMinutes = Math.max(0, Math.round(hours * 60));
+    const durationHours = Math.floor(totalMinutes / 60);
+    const durationMinutes = totalMinutes % 60;
+    return `${String(durationHours).padStart(2, '0')}:${String(durationMinutes).padStart(2, '0')}`;
+  }
+
+  private buildDefaultFileName(startDate?: string, endDate?: string): string {
+    if (startDate && endDate) {
+      return startDate === endDate
+        ? `Aufstellung_Ueberstunden_${startDate}.xlsx`
+        : `Aufstellung_Ueberstunden_${startDate}_bis_${endDate}.xlsx`;
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    return `Aufstellung_Ueberstunden_${today}.xlsx`;
   }
 
   private translateWeekday(englishDay: string): string {
@@ -273,5 +399,36 @@ export class OvertimeExportService {
       Sunday: 'Sonntag',
     };
     return map[englishDay] ?? englishDay;
+  }
+
+  private shouldIncludeExportRow(day: DayBreakdown): boolean {
+    const hasHours = day.actualHours > 0.001 || Math.abs(day.overtimeHours) > 0.001;
+    if (hasHours || day.dayType === 'WorkDay') {
+      return true;
+    }
+
+    return day.dayType !== 'Weekend' && day.dayType !== 'PublicHoliday';
+  }
+
+  private buildDayLabel(day: DayBreakdown): string {
+    const weekday = this.translateWeekday(day.dayOfWeek);
+    const dayTypeLabel = this.translateDayType(day.dayType);
+
+    return dayTypeLabel ? `${weekday}\n${dayTypeLabel}` : weekday;
+  }
+
+  private translateDayType(dayType: DayBreakdown['dayType']): string | null {
+    const map: Record<Exclude<DayBreakdown['dayType'], 'WorkDay'>, string> = {
+      Weekend: 'Wochenende',
+      PublicHoliday: 'Feiertag',
+      Vacation: 'Urlaub',
+      SickDay: 'Krank',
+      PersonalDay: 'Privat',
+      Training: 'Schulung',
+      BusinessTrip: 'Dienstreise',
+      Saldo: 'Saldo',
+    };
+
+    return dayType === 'WorkDay' ? null : map[dayType];
   }
 }

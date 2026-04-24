@@ -44,6 +44,12 @@ pub struct DayBreakdown {
     pub date: String, // Format: YYYY-MM-DD
     /// Day of week (Monday, Tuesday, etc.)
     pub day_of_week: String,
+    /// First tracked start time for the day in HH:MM format
+    pub start_time: Option<String>,
+    /// Last tracked end time for the day in HH:MM format
+    pub end_time: Option<String>,
+    /// Total pause between tracked entries in decimal hours
+    pub break_hours: f64,
     /// Type of day (work, weekend, holiday, etc.)
     pub day_type: DayType,
     /// Expected work hours for this day
@@ -209,6 +215,9 @@ mod tests {
         report.daily_breakdown.push(DayBreakdown {
             date: "2025-10-01".to_string(),
             day_of_week: "Monday".to_string(),
+            start_time: Some("08:00".to_string()),
+            end_time: Some("17:00".to_string()),
+            break_hours: 0.0,
             day_type: DayType::WorkDay,
             expected_hours: 8.0,
             actual_hours: 9.0,
@@ -220,6 +229,9 @@ mod tests {
         report.daily_breakdown.push(DayBreakdown {
             date: "2025-10-02".to_string(),
             day_of_week: "Tuesday".to_string(),
+            start_time: Some("08:00".to_string()),
+            end_time: Some("16:00".to_string()),
+            break_hours: 0.5,
             day_type: DayType::WorkDay,
             expected_hours: 8.0,
             actual_hours: 7.5,
@@ -231,6 +243,9 @@ mod tests {
         report.daily_breakdown.push(DayBreakdown {
             date: "2025-10-03".to_string(),
             day_of_week: "Wednesday".to_string(),
+            start_time: None,
+            end_time: None,
+            break_hours: 0.0,
             day_type: DayType::PublicHoliday,
             expected_hours: 0.0,
             actual_hours: 0.0,
